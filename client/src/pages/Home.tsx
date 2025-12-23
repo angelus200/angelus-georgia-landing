@@ -58,7 +58,7 @@ export default function Home() {
               <img
                 src="/images/angelus-logo.png"
                 alt="Angelus Management Georgia"
-                className="h-20 w-auto object-contain brightness-0"
+                className="h-24 w-auto object-contain"
               />
               <h1 className="text-5xl lg:text-6xl font-bold leading-tight text-foreground">
                 Strukturierte <span className="text-gold">Immobilieninvestments</span> in Georgien
@@ -565,7 +565,7 @@ export default function Home() {
               <img
                 src="/images/angelus-logo.png"
                 alt="Angelus Management Georgia"
-                className="h-12 w-auto object-contain brightness-0"
+                className="h-14 w-auto object-contain"
               />
               <p className="text-sm text-muted-foreground">
                 Strukturierte Immobilieninvestments in Georgien mit professionellem Management.
