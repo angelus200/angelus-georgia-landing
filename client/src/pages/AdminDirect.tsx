@@ -63,21 +63,25 @@ function AdminDirectDashboard() {
         const contactsRes = await fetch("/api/trpc/contacts.list?input={}");
         if (contactsRes.ok) {
           const data = await contactsRes.json();
-          setContacts(data.result?.data || []);
+          // TRPC gibt result.data.json zurück
+          const contactsData = data.result?.data?.json || data.result?.data || [];
+          setContacts(Array.isArray(contactsData) ? contactsData : []);
         }
         
         // Immobilien laden
         const propertiesRes = await fetch("/api/trpc/properties.list?input={}");
         if (propertiesRes.ok) {
           const data = await propertiesRes.json();
-          setProperties(data.result?.data || []);
+          const propertiesData = data.result?.data?.json || data.result?.data || [];
+          setProperties(Array.isArray(propertiesData) ? propertiesData : []);
         }
         
         // Buchungen laden
         const bookingsRes = await fetch("/api/trpc/bookings.list?input={}");
         if (bookingsRes.ok) {
           const data = await bookingsRes.json();
-          setBookings(data.result?.data || []);
+          const bookingsData = data.result?.data?.json || data.result?.data || [];
+          setBookings(Array.isArray(bookingsData) ? bookingsData : []);
         }
       } catch (error) {
         console.error("Fehler beim Laden der Daten:", error);
