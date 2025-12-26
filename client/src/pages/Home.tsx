@@ -181,7 +181,7 @@ export default function Home() {
                   Telegram
                 </a>
                 <a 
-                  href="https://www.facebook.com/search/top?q=angelus%20management%20georgia" 
+                  href="https://www.facebook.com/profile.php?id=61584186435160" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1877F2] hover:bg-[#0d65d9] text-white text-sm font-medium transition-colors"
@@ -705,7 +705,7 @@ export default function Home() {
                   </svg>
                 </a>
                 <a 
-                  href="https://www.facebook.com/search/top?q=angelus%20management%20georgia" 
+                  href="https://www.facebook.com/profile.php?id=61584186435160" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center justify-center w-10 h-10 rounded-full bg-[#1877F2] hover:bg-[#0d65d9] transition-colors"
