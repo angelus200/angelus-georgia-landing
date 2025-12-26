@@ -1,4 +1,6 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +24,10 @@ import { useState, FormEvent } from "react";
 import { toast } from "sonner";
 
 export default function Home() {
+  // The userAuth hooks provides authentication state
+  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
+  let { user, loading, error, isAuthenticated, logout } = useAuth();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -29,10 +35,19 @@ export default function Home() {
     message: "",
   });
 
+  const submitMutation = trpc.contact.submit.useMutation({
+    onSuccess: () => {
+      toast.success("Vielen Dank für Ihr Interesse! Wir melden uns in Kürze bei Ihnen.");
+      setFormData({ name: "", email: "", phone: "", message: "" });
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Senden: ${error.message}`);
+    },
+  });
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    toast.success("Vielen Dank für Ihr Interesse! Wir melden uns in Kürze bei Ihnen.");
-    setFormData({ name: "", email: "", phone: "", message: "" });
+    submitMutation.mutate(formData);
   };
 
   const scrollToContact = () => {
@@ -526,9 +541,10 @@ export default function Home() {
               <Button
                 type="submit"
                 size="lg"
+                disabled={submitMutation.isPending}
                 className="w-full bg-gold text-white hover:bg-gold/90 transition-all duration-300 text-lg py-6"
               >
-                Nachricht senden
+                {submitMutation.isPending ? "Wird gesendet..." : "Nachricht senden"}
               </Button>
             </form>
           </Card>
