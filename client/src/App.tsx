@@ -19,6 +19,7 @@ import InvestorDashboard from "./pages/InvestorDashboard";
 import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
 import ServicePackages from "./pages/ServicePackages";
+import AdminDirect from "./pages/AdminDirect";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -59,6 +60,7 @@ function Router() {
       <Route path={"/verify-email"} component={VerifyEmail} />
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin"} component={Admin} />
+      <Route path={"/admin/direct/:token"} component={AdminDirect} />
       <Route path={"/dashboard"} component={InvestorDashboard} />
       <Route path={"/immobilien"} component={Properties} />
       <Route path={"/immobilien/:id"} component={PropertyDetail} />

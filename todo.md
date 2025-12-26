@@ -61,3 +61,9 @@
 - [x] Cookie-Einstellungen überprüft (SameSite, Secure, Domain)
 - [x] OAuth-Callback debuggt und repariert
 - [x] Session-Token als URL-Parameter als Fallback implementiert
+
+## Geheimer Admin-Direktlink
+- [x] Geheimen Token für Direktzugang generiert
+- [x] Route für Direktlink erstellt (/admin/direct/[token])
+- [x] Separates Admin-Dashboard ohne Auth-Check implementiert
+- [x] Link dem Benutzer mitgeteilt
