@@ -75,3 +75,36 @@
 - [x] Kontaktanfragen: Status ändern
 - [x] Buchungen: Status ändern
 - [x] Alle Funktionen getestet
+
+## E-Commerce-Plattform Erweiterung
+
+### Phase 1: Datenbank-Schema erweitern
+- [x] Immobilien-Schema: Fotos (mehrere), Videos, erweiterte Beschreibungen
+- [x] Immobilien-Schema: Kaufpreis, Zahlungsbedingungen, Ratenzahlungsoptionen
+- [x] Dienstleistungen-Schema: Unternehmensgründungen mit Preisen
+- [x] Dienstleistungen-Schema: Mietgarantien mit Preisen
+- [x] Bestellungen-Schema: Warenkorb, Bestellpositionen, Zusatzleistungen
+- [x] Zahlungen-Schema: Krypto-Wallet, Banküberweisung, Status
+
+### Phase 2: Admin - Erweiterte Immobilienverwaltung
+- [x] Mehrere Fotos pro Immobilie hochladen (S3)
+- [x] Videos hochladen/einbetten
+- [x] Zahlungsbedingungen konfigurieren (Anzahlung, Raten, Laufzeit)
+- [x] Ratenzahlungsoptionen definieren
+
+### Phase 3: Admin - Dienstleistungsverwaltung
+- [x] Unternehmensgründungen anlegen mit Preisen
+- [x] Mietgarantien anlegen mit Preisen/Konditionen
+- [x] Zusatzleistungen pro Immobilie konfigurieren
+
+### Phase 4: Kunden-Kaufprozess
+- [x] Immobilien-Detailseite mit allen Infos
+- [x] Warenkorb-Funktion
+- [x] Zusatzleistungen beim Kauf auswählen
+- [x] Checkout-Prozess
+
+### Phase 5: Zahlungssystem
+- [x] Krypto-Wallet-Integration (Bitcoin, Ethereum, USDT)
+- [x] Banküberweisung mit Zahlungsanweisungen
+- [x] Zahlungsstatus-Tracking
+- [ ] Bestellbestätigungen per E-Mail (optional)

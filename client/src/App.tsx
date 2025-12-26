@@ -20,6 +20,11 @@ import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
 import ServicePackages from "./pages/ServicePackages";
 import AdminDirect from "./pages/AdminDirect";
+import AdminEcommerce from "./pages/AdminEcommerce";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import MyOrders from "./pages/MyOrders";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -65,6 +70,11 @@ function Router() {
       <Route path={"/immobilien"} component={Properties} />
       <Route path={"/immobilien/:id"} component={PropertyDetail} />
       <Route path={"/service-pakete"} component={ServicePackages} />
+      <Route path={"/admin/ecommerce"} component={AdminEcommerce} />
+      <Route path={"/warenkorb"} component={Cart} />
+      <Route path={"/checkout"} component={Checkout} />
+      <Route path={"/bestellung/:orderNumber"} component={OrderConfirmation} />
+      <Route path={"/meine-bestellungen"} component={MyOrders} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

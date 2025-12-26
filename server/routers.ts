@@ -22,6 +22,14 @@ import {
   getPaymentsByUserId,
   updatePaymentStatus
 } from "./db";
+import {
+  servicesRouter,
+  cartRouter,
+  ordersRouter,
+  paymentRouter,
+  propertyMediaRouter,
+  adminPropertiesRouter
+} from "./ecommerce-routers";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { getDb } from "./db";
@@ -482,6 +490,14 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  // E-Commerce Routers
+  services: servicesRouter,
+  cart: cartRouter,
+  orders: ordersRouter,
+  payment: paymentRouter,
+  propertyMedia: propertyMediaRouter,
+  adminProperties: adminPropertiesRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -55,21 +55,52 @@ export const properties = mysqlTable("properties", {
   id: int("id").autoincrement().primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
+  /** Extended description with more details */
+  longDescription: text("longDescription"),
   location: varchar("location", { length: 255 }).notNull(),
   city: varchar("city", { length: 100 }).notNull(),
+  /** GPS coordinates for map display */
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
+  /** Price per square meter */
+  pricePerSqm: decimal("pricePerSqm", { precision: 10, scale: 2 }),
   area: decimal("area", { precision: 10, scale: 2 }).notNull(),
   bedrooms: int("bedrooms").notNull(),
   bathrooms: int("bathrooms").notNull(),
+  /** Year of construction */
+  yearBuilt: int("yearBuilt"),
+  /** Property type */
+  propertyType: mysqlEnum("propertyType", ["apartment", "house", "villa", "commercial", "land"]).default("apartment"),
   constructionStatus: mysqlEnum("constructionStatus", ["planning", "foundation", "structure", "finishing", "completed"]).notNull(),
   completionDate: timestamp("completionDate"),
+  /** Main image URL */
+  mainImage: varchar("mainImage", { length: 500 }),
   images: text("images").notNull(), // JSON array of image URLs
+  /** JSON array of video URLs (YouTube, Vimeo, or direct) */
+  videos: text("videos"),
+  /** Virtual tour URL */
+  virtualTourUrl: varchar("virtualTourUrl", { length: 500 }),
   features: text("features"), // JSON array of features
+  /** JSON array of amenities */
+  amenities: text("amenities"),
   expectedReturn: decimal("expectedReturn", { precision: 5, scale: 2 }), // percentage
   rentalGuarantee: boolean("rentalGuarantee").default(false),
+  /** Rental guarantee percentage if available */
+  rentalGuaranteePercent: decimal("rentalGuaranteePercent", { precision: 5, scale: 2 }),
+  /** Rental guarantee duration in months */
+  rentalGuaranteeDuration: int("rentalGuaranteeDuration"),
   installmentAvailable: boolean("installmentAvailable").default(true),
   minDownPayment: decimal("minDownPayment", { precision: 5, scale: 2 }), // percentage
+  /** Maximum installment duration in months */
+  maxInstallmentMonths: int("maxInstallmentMonths"),
+  /** Interest rate for installments */
+  installmentInterestRate: decimal("installmentInterestRate", { precision: 5, scale: 2 }),
   status: mysqlEnum("status", ["available", "reserved", "sold"]).default("available").notNull(),
+  /** Featured property for homepage */
+  isFeatured: boolean("isFeatured").default(false),
+  /** View count */
+  viewCount: int("viewCount").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -137,4 +168,249 @@ export const installmentPayments = mysqlTable("installment_payments", {
 export type InstallmentPayment = typeof installmentPayments.$inferSelect;
 export type InsertInstallmentPayment = typeof installmentPayments.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Property media table for multiple images and videos
+ */
+export const propertyMedia = mysqlTable("property_media", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  type: mysqlEnum("type", ["image", "video", "document"]).notNull(),
+  url: varchar("url", { length: 500 }).notNull(),
+  /** S3 key for uploaded files */
+  s3Key: varchar("s3Key", { length: 500 }),
+  title: varchar("title", { length: 255 }),
+  description: text("description"),
+  /** Display order */
+  sortOrder: int("sortOrder").default(0),
+  /** Is this the main/cover image */
+  isPrimary: boolean("isPrimary").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PropertyMedia = typeof propertyMedia.$inferSelect;
+export type InsertPropertyMedia = typeof propertyMedia.$inferInsert;
+
+/**
+ * Services table for individual services (company formation, rental guarantees, etc.)
+ */
+export const services = mysqlTable("services", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  description: text("description").notNull(),
+  longDescription: text("longDescription"),
+  category: mysqlEnum("category", ["company_formation", "rental_guarantee", "property_management", "legal", "tax", "other"]).notNull(),
+  /** Base price in EUR */
+  price: decimal("price", { precision: 15, scale: 2 }).notNull(),
+  /** Price type */
+  priceType: mysqlEnum("priceType", ["fixed", "monthly", "yearly", "percentage", "custom"]).default("fixed"),
+  /** If percentage-based, what percentage */
+  percentageRate: decimal("percentageRate", { precision: 5, scale: 2 }),
+  /** Duration in months (for subscriptions) */
+  durationMonths: int("durationMonths"),
+  /** JSON array of included items/features */
+  includedItems: text("includedItems"),
+  /** JSON array of requirements */
+  requirements: text("requirements"),
+  /** Processing time in days */
+  processingTimeDays: int("processingTimeDays"),
+  /** Icon name for display */
+  icon: varchar("icon", { length: 50 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  /** Can be purchased standalone */
+  isStandalone: boolean("isStandalone").default(true),
+  /** Can be added to property purchase */
+  isAddon: boolean("isAddon").default(true),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Service = typeof services.$inferSelect;
+export type InsertService = typeof services.$inferInsert;
+
+/**
+ * Shopping cart table
+ */
+export const carts = mysqlTable("carts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  /** Session ID for guest carts */
+  sessionId: varchar("sessionId", { length: 255 }),
+  status: mysqlEnum("status", ["active", "converted", "abandoned"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+});
+
+export type Cart = typeof carts.$inferSelect;
+export type InsertCart = typeof carts.$inferInsert;
+
+/**
+ * Cart items table
+ */
+export const cartItems = mysqlTable("cart_items", {
+  id: int("id").autoincrement().primaryKey(),
+  cartId: int("cartId").notNull(),
+  itemType: mysqlEnum("itemType", ["property", "service", "package"]).notNull(),
+  /** Property ID if itemType is property */
+  propertyId: int("propertyId"),
+  /** Service ID if itemType is service */
+  serviceId: int("serviceId"),
+  /** Package ID if itemType is package */
+  packageId: int("packageId"),
+  quantity: int("quantity").default(1).notNull(),
+  /** Unit price at time of adding to cart */
+  unitPrice: decimal("unitPrice", { precision: 15, scale: 2 }).notNull(),
+  /** JSON object with additional options (e.g., payment plan selection) */
+  options: text("options"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CartItem = typeof cartItems.$inferSelect;
+export type InsertCartItem = typeof cartItems.$inferInsert;
+
+/**
+ * Orders table
+ */
+export const orders = mysqlTable("orders", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Order number for display */
+  orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(),
+  userId: int("userId").notNull(),
+  /** Total order amount */
+  totalAmount: decimal("totalAmount", { precision: 15, scale: 2 }).notNull(),
+  /** Amount in selected currency */
+  currencyAmount: decimal("currencyAmount", { precision: 20, scale: 8 }),
+  currency: varchar("currency", { length: 10 }).default("EUR"),
+  /** Crypto currency if paying with crypto */
+  cryptoCurrency: varchar("cryptoCurrency", { length: 20 }),
+  /** Exchange rate at time of order */
+  exchangeRate: decimal("exchangeRate", { precision: 20, scale: 8 }),
+  status: mysqlEnum("status", ["pending", "awaiting_payment", "payment_received", "processing", "completed", "cancelled", "refunded"]).default("pending").notNull(),
+  paymentMethod: mysqlEnum("paymentMethod", ["crypto_btc", "crypto_eth", "crypto_usdt", "bank_transfer", "card"]),
+  /** Payment details JSON (wallet address, bank details, etc.) */
+  paymentDetails: text("paymentDetails"),
+  /** Billing address JSON */
+  billingAddress: text("billingAddress"),
+  notes: text("notes"),
+  /** Admin notes (internal) */
+  adminNotes: text("adminNotes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  paidAt: timestamp("paidAt"),
+  completedAt: timestamp("completedAt"),
+});
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = typeof orders.$inferInsert;
+
+/**
+ * Order items table
+ */
+export const orderItems = mysqlTable("order_items", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  itemType: mysqlEnum("itemType", ["property", "service", "package"]).notNull(),
+  propertyId: int("propertyId"),
+  serviceId: int("serviceId"),
+  packageId: int("packageId"),
+  /** Item name at time of purchase */
+  itemName: varchar("itemName", { length: 255 }).notNull(),
+  /** Item description at time of purchase */
+  itemDescription: text("itemDescription"),
+  quantity: int("quantity").default(1).notNull(),
+  unitPrice: decimal("unitPrice", { precision: 15, scale: 2 }).notNull(),
+  totalPrice: decimal("totalPrice", { precision: 15, scale: 2 }).notNull(),
+  /** JSON object with selected options */
+  options: text("options"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OrderItem = typeof orderItems.$inferSelect;
+export type InsertOrderItem = typeof orderItems.$inferInsert;
+
+/**
+ * Payment transactions table
+ */
+export const paymentTransactions = mysqlTable("payment_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  /** Transaction reference */
+  transactionRef: varchar("transactionRef", { length: 255 }).notNull().unique(),
+  type: mysqlEnum("type", ["payment", "refund", "partial_payment"]).default("payment").notNull(),
+  method: mysqlEnum("method", ["crypto_btc", "crypto_eth", "crypto_usdt", "bank_transfer", "card"]).notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  /** Amount in crypto if applicable */
+  cryptoAmount: decimal("cryptoAmount", { precision: 20, scale: 8 }),
+  cryptoCurrency: varchar("cryptoCurrency", { length: 20 }),
+  /** Blockchain transaction hash */
+  txHash: varchar("txHash", { length: 255 }),
+  /** Wallet address used */
+  walletAddress: varchar("walletAddress", { length: 255 }),
+  /** Bank transfer reference */
+  bankReference: varchar("bankReference", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "confirming", "confirmed", "failed", "cancelled"]).default("pending").notNull(),
+  /** Number of confirmations (for crypto) */
+  confirmations: int("confirmations").default(0),
+  /** JSON with additional transaction details */
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  confirmedAt: timestamp("confirmedAt"),
+});
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;
+
+/**
+ * Crypto wallet addresses for receiving payments
+ */
+export const cryptoWallets = mysqlTable("crypto_wallets", {
+  id: int("id").autoincrement().primaryKey(),
+  currency: mysqlEnum("currency", ["BTC", "ETH", "USDT_ERC20", "USDT_TRC20"]).notNull(),
+  address: varchar("address", { length: 255 }).notNull(),
+  label: varchar("label", { length: 100 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CryptoWallet = typeof cryptoWallets.$inferSelect;
+export type InsertCryptoWallet = typeof cryptoWallets.$inferInsert;
+
+/**
+ * Bank accounts for receiving payments
+ */
+export const bankAccounts = mysqlTable("bank_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  bankName: varchar("bankName", { length: 255 }).notNull(),
+  accountName: varchar("accountName", { length: 255 }).notNull(),
+  iban: varchar("iban", { length: 50 }),
+  swift: varchar("swift", { length: 20 }),
+  accountNumber: varchar("accountNumber", { length: 50 }),
+  routingNumber: varchar("routingNumber", { length: 50 }),
+  currency: varchar("currency", { length: 10 }).default("EUR"),
+  country: varchar("country", { length: 100 }),
+  address: text("address"),
+  isActive: boolean("isActive").default(true).notNull(),
+  isPrimary: boolean("isPrimary").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BankAccount = typeof bankAccounts.$inferSelect;
+export type InsertBankAccount = typeof bankAccounts.$inferInsert;
+
+/**
+ * Exchange rates cache
+ */
+export const exchangeRates = mysqlTable("exchange_rates", {
+  id: int("id").autoincrement().primaryKey(),
+  baseCurrency: varchar("baseCurrency", { length: 10 }).notNull(),
+  targetCurrency: varchar("targetCurrency", { length: 10 }).notNull(),
+  rate: decimal("rate", { precision: 20, scale: 8 }).notNull(),
+  source: varchar("source", { length: 100 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type InsertExchangeRate = typeof exchangeRates.$inferInsert;
