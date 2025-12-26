@@ -7,3 +7,7 @@
 - [x] Status-Filterung implementieren
 - [x] Detailansicht für Anfragen hinzufügen
 - [x] Testen und finalisieren
+
+## Footer-Links
+- [x] Datenschutzerklärung-Seite erstellen
+- [x] Footer-Links für Datenschutz und Impressum hinzufügen

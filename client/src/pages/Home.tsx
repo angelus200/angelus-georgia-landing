@@ -625,13 +625,8 @@ export default function Home() {
                   </a>
                 </p>
                 <p>
-                  <a href="#" className="hover:text-gold transition-colors">
+                  <a href="/datenschutz" className="hover:text-gold transition-colors">
                     Datenschutz
-                  </a>
-                </p>
-                <p>
-                  <a href="#" className="hover:text-gold transition-colors">
-                    AGB
                   </a>
                 </p>
               </div>
