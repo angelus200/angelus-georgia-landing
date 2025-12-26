@@ -29,3 +29,6 @@
 - [x] Admin-Seite zu /admin/login weiterleiten wenn nicht angemeldet
 - [x] Alle Login-Links korrigieren
 - [x] Lokale Authentifizierung testen
+
+## Admin-Login-Link auf Landing Page
+- [x] Admin-Login-Link im Footer hinzufügen

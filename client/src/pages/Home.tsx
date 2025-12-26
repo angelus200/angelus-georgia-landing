@@ -642,6 +642,11 @@ export default function Home() {
                     AGB
                   </a>
                 </p>
+                <p>
+                  <a href="/admin/login" className="hover:text-gold transition-colors">
+                    Admin-Login
+                  </a>
+                </p>
               </div>
             </div>
           </div>
