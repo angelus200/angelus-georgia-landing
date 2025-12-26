@@ -17,6 +17,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import InvestorDashboard from "./pages/InvestorDashboard";
 import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
+import ServicePackages from "./pages/ServicePackages";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path={"/dashboard"} component={InvestorDashboard} />
       <Route path={"/immobilien"} component={Properties} />
       <Route path={"/immobilien/:id"} component={PropertyDetail} />
+      <Route path={"/service-pakete"} component={ServicePackages} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

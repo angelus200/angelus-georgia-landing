@@ -133,6 +133,12 @@ export default function Login() {
                 </Button>
               </form>
 
+              <div className="text-center">
+                <Link href="/forgot-password" className="text-sm text-gold hover:underline">
+                  Passwort vergessen?
+                </Link>
+              </div>
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <Separator />
