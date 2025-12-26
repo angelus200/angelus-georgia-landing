@@ -138,3 +138,8 @@
 - [x] Telegram-Kanal-Link hinzufügen (https://t.me/Angelus_Management_GeorgiaDE)
 - [x] Abonnieren-Buttons im Hero-Bereich und Footer
 - [x] Facebook-Seite hinzufügen (https://www.facebook.com/search/top?q=angelus%20management%20georgia)
+
+## Mobile Navigation
+- [x] Hamburger-Menü Komponente erstellen
+- [x] Mobile Navigation in Home.tsx integrieren
+- [x] Responsive Breakpoints (md: 768px) implementiert

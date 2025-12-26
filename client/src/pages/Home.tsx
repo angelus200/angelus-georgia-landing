@@ -18,7 +18,9 @@ import {
   Quote,
   Award,
   Globe,
-  Target
+  Target,
+  Menu,
+  X
 } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { toast } from "sonner";
@@ -27,6 +29,8 @@ export default function Home() {
   // The userAuth hooks provides authentication state
   // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
   let { user, loading, error, isAuthenticated, logout } = useAuth();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -73,7 +77,16 @@ export default function Home() {
               <a href="/service-pakete" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Services</a>
               <a href="/#contact" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Kontakt</a>
             </nav>
-            <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden p-2 text-foreground hover:text-gold transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Menü öffnen"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+
+            <div className="hidden md:flex items-center gap-3">
               {user ? (
                 <>
                   <a href="/dashboard">
@@ -102,6 +115,75 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation Panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-background border-t border-border">
+            <nav className="container py-4 flex flex-col gap-4">
+              <a 
+                href="/#projects" 
+                className="text-base font-medium text-foreground hover:text-gold transition-colors py-2 border-b border-border/50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Projekte
+              </a>
+              <a 
+                href="/immobilien" 
+                className="text-base font-medium text-foreground hover:text-gold transition-colors py-2 border-b border-border/50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Immobilien
+              </a>
+              <a 
+                href="/service-pakete" 
+                className="text-base font-medium text-foreground hover:text-gold transition-colors py-2 border-b border-border/50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Services
+              </a>
+              <a 
+                href="/#contact" 
+                className="text-base font-medium text-foreground hover:text-gold transition-colors py-2 border-b border-border/50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Kontakt
+              </a>
+              
+              {/* Mobile Auth Buttons */}
+              <div className="flex flex-col gap-3 pt-4">
+                {user ? (
+                  <>
+                    <a href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-gold text-gold hover:bg-gold hover:text-white">
+                        Dashboard
+                      </Button>
+                    </a>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground hover:text-foreground"
+                      onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    >
+                      Abmelden
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <a href="/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-gold text-gold hover:bg-gold hover:text-white">
+                        Anmelden
+                      </Button>
+                    </a>
+                    <a href="/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button className="w-full bg-gold text-white hover:bg-gold/90">
+                        Registrieren
+                      </Button>
+                    </a>
+                  </>
+                )}
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
