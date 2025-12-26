@@ -537,21 +537,21 @@ export default function Home() {
             <div className="space-y-2">
               <Mail className="h-8 w-8 text-gold mx-auto" />
               <p className="font-semibold text-foreground">E-Mail</p>
-              <a href="mailto:info@angelus-georgia.com" className="text-muted-foreground hover:text-gold transition-colors">
-                info@angelus-georgia.com
+              <a href="mailto:angelusmanagementgeorgia@gmail.com" className="text-muted-foreground hover:text-gold transition-colors">
+                angelusmanagementgeorgia@gmail.com
               </a>
             </div>
             <div className="space-y-2">
               <Phone className="h-8 w-8 text-gold mx-auto" />
               <p className="font-semibold text-foreground">Telefon</p>
-              <a href="tel:+995123456789" className="text-muted-foreground hover:text-gold transition-colors">
-                +995 123 456 789
+              <a href="tel:+995579106719" className="text-muted-foreground hover:text-gold transition-colors">
+                +995 579 10 67 19
               </a>
             </div>
             <div className="space-y-2">
               <MapPin className="h-8 w-8 text-gold mx-auto" />
               <p className="font-semibold text-foreground">Standort</p>
-              <p className="text-muted-foreground">Tiflis, Georgien</p>
+              <p className="text-muted-foreground">26 May Street, No. 19, Batumi, Georgia</p>
             </div>
           </div>
         </div>
@@ -575,16 +575,16 @@ export default function Home() {
             <div className="space-y-4">
               <h4 className="font-semibold text-gold">Kontakt</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Angelus Management Georgia</p>
-                <p>Tiflis, Georgien</p>
+                <p>ANGELUS MANAGEMENT GEORGIA LLC</p>
+                <p>26 May Street, No. 19, Batumi, Georgia</p>
                 <p>
-                  <a href="mailto:info@angelus-georgia.com" className="hover:text-gold transition-colors">
-                    info@angelus-georgia.com
+                  <a href="mailto:angelusmanagementgeorgia@gmail.com" className="hover:text-gold transition-colors">
+                    angelusmanagementgeorgia@gmail.com
                   </a>
                 </p>
                 <p>
-                  <a href="tel:+995123456789" className="hover:text-gold transition-colors">
-                    +995 123 456 789
+                  <a href="tel:+995579106719" className="hover:text-gold transition-colors">
+                    +995 579 10 67 19
                   </a>
                 </p>
               </div>
@@ -604,7 +604,7 @@ export default function Home() {
               <h4 className="font-semibold text-gold">Rechtliches</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  <a href="#" className="hover:text-gold transition-colors">
+                  <a href="/impressum" className="hover:text-gold transition-colors">
                     Impressum
                   </a>
                 </p>
