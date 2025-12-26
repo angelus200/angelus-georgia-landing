@@ -146,3 +146,249 @@ export async function sendBookingConfirmation(
     console.error('Error sending booking confirmation email:', error);
   }
 }
+
+
+// E-Commerce Order Confirmation Email
+export async function sendOrderConfirmation(
+  to: string,
+  orderDetails: {
+    orderNumber: string;
+    customerName: string;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+    totalAmount: number;
+    paymentMethod: string;
+    paymentInstructions?: string;
+  }
+) {
+  const itemsHtml = orderDetails.items.map(item => `
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 12px;">${item.name}</td>
+      <td style="padding: 12px; text-align: center;">${item.quantity}</td>
+      <td style="padding: 12px; text-align: right;">€${item.price.toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `Bestellbestätigung #${orderDetails.orderNumber} - Angelus Management Georgia`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #B8860B; margin: 0;">Bestellbestätigung</h1>
+              <p style="color: #666; margin-top: 10px;">Bestellung #${orderDetails.orderNumber}</p>
+            </div>
+            
+            <p>Sehr geehrte(r) ${orderDetails.customerName},</p>
+            <p>vielen Dank für Ihre Bestellung bei Angelus Management Georgia!</p>
+            
+            <h2 style="color: #333; border-bottom: 2px solid #B8860B; padding-bottom: 10px;">Ihre Bestellung</h2>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <thead>
+                <tr style="background-color: #f5f5f5;">
+                  <th style="padding: 12px; text-align: left;">Artikel</th>
+                  <th style="padding: 12px; text-align: center;">Menge</th>
+                  <th style="padding: 12px; text-align: right;">Preis</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+              <tfoot>
+                <tr style="background-color: #B8860B; color: white;">
+                  <td colspan="2" style="padding: 12px;"><strong>Gesamtsumme</strong></td>
+                  <td style="padding: 12px; text-align: right;"><strong>€${orderDetails.totalAmount.toLocaleString()}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+            
+            <h2 style="color: #333; border-bottom: 2px solid #B8860B; padding-bottom: 10px;">Zahlungsinformationen</h2>
+            <p><strong>Zahlungsmethode:</strong> ${orderDetails.paymentMethod}</p>
+            ${orderDetails.paymentInstructions ? `
+              <div style="background-color: #fff8e1; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #B8860B;">
+                <p style="margin: 0;"><strong>Zahlungsanweisungen:</strong></p>
+                <p style="margin: 10px 0 0 0; white-space: pre-line;">${orderDetails.paymentInstructions}</p>
+              </div>
+            ` : ''}
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+              <p style="color: #666; font-size: 14px;">
+                Bei Fragen zu Ihrer Bestellung kontaktieren Sie uns bitte unter:<br>
+                <a href="mailto:angelusmanagementgeorgia@gmail.com" style="color: #B8860B;">angelusmanagementgeorgia@gmail.com</a><br>
+                Tel: +995 579 10 67 19
+              </p>
+            </div>
+            
+            <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br><strong>Ihr Angelus Management Team</strong></p>
+          </div>
+        </div>
+      `,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending order confirmation email:', error);
+    return { success: false, error };
+  }
+}
+
+// Payment Received Confirmation Email
+export async function sendPaymentReceivedEmail(
+  to: string,
+  paymentDetails: {
+    orderNumber: string;
+    customerName: string;
+    amount: number;
+    paymentMethod: string;
+    transactionId?: string;
+    remainingBalance?: number;
+  }
+) {
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `Zahlungseingang bestätigt #${paymentDetails.orderNumber} - Angelus Management Georgia`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="background-color: #4CAF50; color: white; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px;">✓</div>
+              <h1 style="color: #4CAF50; margin: 20px 0 0 0;">Zahlung erhalten</h1>
+            </div>
+            
+            <p>Sehr geehrte(r) ${paymentDetails.customerName},</p>
+            <p>wir bestätigen den Eingang Ihrer Zahlung für Bestellung #${paymentDetails.orderNumber}.</p>
+            
+            <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 8px 0;"><strong>Betrag:</strong></td>
+                  <td style="text-align: right; color: #4CAF50; font-size: 18px;"><strong>€${paymentDetails.amount.toLocaleString()}</strong></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;"><strong>Zahlungsmethode:</strong></td>
+                  <td style="text-align: right;">${paymentDetails.paymentMethod}</td>
+                </tr>
+                ${paymentDetails.transactionId ? `
+                <tr>
+                  <td style="padding: 8px 0;"><strong>Transaktions-ID:</strong></td>
+                  <td style="text-align: right; font-family: monospace; font-size: 12px;">${paymentDetails.transactionId}</td>
+                </tr>
+                ` : ''}
+                ${paymentDetails.remainingBalance !== undefined && paymentDetails.remainingBalance > 0 ? `
+                <tr style="border-top: 1px solid #ddd;">
+                  <td style="padding: 8px 0;"><strong>Restbetrag:</strong></td>
+                  <td style="text-align: right; color: #B8860B;"><strong>€${paymentDetails.remainingBalance.toLocaleString()}</strong></td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            ${paymentDetails.remainingBalance === 0 || paymentDetails.remainingBalance === undefined ? `
+            <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; text-align: center;">
+              <p style="margin: 0; color: #2e7d32;"><strong>✓ Ihre Bestellung ist vollständig bezahlt</strong></p>
+            </div>
+            ` : ''}
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+              <p style="color: #666; font-size: 14px;">
+                Sie können den Status Ihrer Bestellung jederzeit in Ihrem Dashboard einsehen.
+              </p>
+            </div>
+            
+            <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br><strong>Ihr Angelus Management Team</strong></p>
+          </div>
+        </div>
+      `,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending payment received email:', error);
+    return { success: false, error };
+  }
+}
+
+// Admin Notification for New Order
+export async function sendAdminOrderNotification(
+  orderDetails: {
+    orderNumber: string;
+    customerName: string;
+    customerEmail: string;
+    totalAmount: number;
+    paymentMethod: string;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+  }
+) {
+  const adminEmail = 'angelusmanagementgeorgia@gmail.com';
+  
+  const itemsHtml = orderDetails.items.map(item => `
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 8px;">${item.name}</td>
+      <td style="padding: 8px; text-align: center;">${item.quantity}</td>
+      <td style="padding: 8px; text-align: right;">€${item.price.toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: `🔔 Neue Bestellung #${orderDetails.orderNumber} - €${orderDetails.totalAmount.toLocaleString()}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #B8860B; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0;">Neue Bestellung eingegangen!</h1>
+          </div>
+          
+          <div style="padding: 20px; background-color: #f9f9f9;">
+            <h2 style="color: #333;">Bestellung #${orderDetails.orderNumber}</h2>
+            
+            <div style="background-color: white; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+              <h3 style="margin-top: 0; color: #B8860B;">Kundeninformationen</h3>
+              <p><strong>Name:</strong> ${orderDetails.customerName}</p>
+              <p><strong>E-Mail:</strong> <a href="mailto:${orderDetails.customerEmail}">${orderDetails.customerEmail}</a></p>
+            </div>
+            
+            <div style="background-color: white; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+              <h3 style="margin-top: 0; color: #B8860B;">Bestelldetails</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #f5f5f5;">
+                    <th style="padding: 8px; text-align: left;">Artikel</th>
+                    <th style="padding: 8px; text-align: center;">Menge</th>
+                    <th style="padding: 8px; text-align: right;">Preis</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+              <p style="text-align: right; font-size: 18px; margin-top: 15px;">
+                <strong>Gesamt: €${orderDetails.totalAmount.toLocaleString()}</strong>
+              </p>
+            </div>
+            
+            <div style="background-color: white; padding: 15px; border-radius: 5px;">
+              <h3 style="margin-top: 0; color: #B8860B;">Zahlungsmethode</h3>
+              <p style="font-size: 16px;"><strong>${orderDetails.paymentMethod}</strong></p>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending admin order notification:', error);
+    return { success: false, error };
+  }
+}

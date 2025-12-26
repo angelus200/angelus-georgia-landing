@@ -143,3 +143,10 @@
 - [x] Hamburger-Menü Komponente erstellen
 - [x] Mobile Navigation in Home.tsx integrieren
 - [x] Responsive Breakpoints (md: 768px) implementiert
+
+## E-Mail-Benachrichtigungen
+- [x] Resend API-Key prüfen und konfigurieren (bereits als API_KEY_RESEND vorhanden)
+- [x] E-Mail-Verifizierung bei Registrierung (bereits implementiert)
+- [x] Bestellbestätigungs-E-Mails implementieren
+- [x] Zahlungseingangs-E-Mails implementieren
+- [x] Admin-Benachrichtigung bei neuen Bestellungen

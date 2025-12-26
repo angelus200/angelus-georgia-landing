@@ -37,6 +37,8 @@ import {
   generateOrderNumber,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
+import { sendOrderConfirmation, sendAdminOrderNotification, sendPaymentReceivedEmail } from "./email";
+import { getUserById } from "./db";
 
 // Services Router
 export const servicesRouter = router({
@@ -231,6 +233,43 @@ export const ordersRouter = router({
         content: `Bestellnummer: ${orderNumber}\nKunde: ${ctx.user.name || ctx.user.email}\nGesamtbetrag: ${input.totalAmount} €\nZahlungsmethode: ${input.paymentMethod}`,
       });
 
+      // Send order confirmation email to customer
+      const paymentMethodNames: Record<string, string> = {
+        bitcoin: "Bitcoin (BTC)",
+        ethereum: "Ethereum (ETH)",
+        usdt: "USDT (Tether)",
+        bank_transfer: "Banküberweisung",
+      };
+
+      await sendOrderConfirmation(ctx.user.email || "keine-email@example.com", {
+        orderNumber,
+        customerName: ctx.user.name || ctx.user.email || "Kunde",
+        items: input.items.map((item) => ({
+          name: item.itemName,
+          quantity: item.quantity,
+          price: parseFloat(item.unitPrice) * item.quantity,
+        })),
+        totalAmount: parseFloat(input.totalAmount),
+        paymentMethod: paymentMethodNames[input.paymentMethod] || input.paymentMethod,
+        paymentInstructions: input.paymentMethod === "bank_transfer" 
+          ? "Bitte überweisen Sie den Betrag auf unser Bankkonto. Die Kontodaten finden Sie auf der Bestellbestätigungsseite."
+          : `Bitte senden Sie den Betrag an die auf der Bestellbestätigungsseite angezeigte ${paymentMethodNames[input.paymentMethod]}-Adresse.`,
+      });
+
+      // Send admin notification
+      await sendAdminOrderNotification({
+        orderNumber,
+        customerName: ctx.user.name || ctx.user.email || "Unbekannt",
+        customerEmail: ctx.user.email || "keine-email@example.com",
+        totalAmount: parseFloat(input.totalAmount),
+        paymentMethod: paymentMethodNames[input.paymentMethod] || input.paymentMethod,
+        items: input.items.map((item) => ({
+          name: item.itemName,
+          quantity: item.quantity,
+          price: parseFloat(item.unitPrice) * item.quantity,
+        })),
+      });
+
       return { success: true, orderId, orderNumber };
     }),
 
@@ -295,6 +334,31 @@ export const ordersRouter = router({
       if (input.status === "completed") additionalData.completedAt = new Date();
 
       await updateOrderStatus(input.id, input.status as any, additionalData);
+
+      // Send payment received email when status changes to payment_received or completed
+      if (input.status === "payment_received" || input.status === "completed") {
+        const order = await getOrderById(input.id);
+        if (order && order.userId) {
+          const user = await getUserById(order.userId);
+          if (user) {
+            const paymentMethodNames: Record<string, string> = {
+              bitcoin: "Bitcoin (BTC)",
+              ethereum: "Ethereum (ETH)",
+              usdt: "USDT (Tether)",
+              bank_transfer: "Banküberweisung",
+            };
+            
+            await sendPaymentReceivedEmail(user.email || "keine-email@example.com", {
+              orderNumber: order.orderNumber,
+              customerName: user.name || user.email || "Kunde",
+              amount: parseFloat(order.totalAmount),
+              paymentMethod: order.paymentMethod ? (paymentMethodNames[order.paymentMethod] || order.paymentMethod) : "Unbekannt",
+              remainingBalance: 0,
+            });
+          }
+        }
+      }
+
       return { success: true };
     }),
 });
