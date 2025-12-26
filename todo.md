@@ -67,3 +67,11 @@
 - [x] Route für Direktlink erstellt (/admin/direct/[token])
 - [x] Separates Admin-Dashboard ohne Auth-Check implementiert
 - [x] Link dem Benutzer mitgeteilt
+
+## Admin-Dashboard CRUD-Funktionen
+- [x] Immobilien: Erstellen-Button und Formular
+- [x] Immobilien: Bearbeiten-Funktion
+- [x] Immobilien: Löschen-Funktion
+- [x] Kontaktanfragen: Status ändern
+- [x] Buchungen: Status ändern
+- [x] Alle Funktionen getestet
