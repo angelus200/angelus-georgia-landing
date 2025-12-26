@@ -44,3 +44,9 @@
 - [x] Admin-Rolle bereits gesetzt
 - [x] OAuth-Callback angepasst - Admin-Benutzer werden jetzt automatisch zu /admin weitergeleitet
 - [x] Admin-Zugang testen
+
+## OAuth-Weiterleitungs-URL korrigieren
+- [x] getLoginUrl() Funktion geprüft - funktioniert korrekt
+- [x] Problem identifiziert: Callback-URL muss in Manus-App-Einstellungen registriert werden
+- [x] Detaillierte Anleitung erstellt (OAUTH_CALLBACK_ANLEITUNG.md)
+- [ ] Benutzer muss Callback-URL in Manus-Plattform aktualisieren
