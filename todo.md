@@ -49,3 +49,7 @@
 - [x] Admin-Login-Seite mit Manus OAuth und E-Mail/Passwort
 - [x] Kunden-Login/Registrierungs-Seite
 - [x] Rollen-basierte Zugriffskontrolle (Admin vs. Kunde)
+
+## Navigation & Login-Links
+- [x] "Mein Dashboard"-Button auf Startseite zur Login-Seite verlinken
+- [ ] Navigation im Header erweitern (Login/Logout, Benutzername anzeigen)
