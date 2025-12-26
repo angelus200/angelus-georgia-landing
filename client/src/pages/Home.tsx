@@ -56,8 +56,56 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="container py-4">
+          <div className="flex items-center justify-between">
+            <a href="/">
+              <img
+                src="/images/angelus-logo.png"
+                alt="Angelus Management Georgia"
+                className="h-10 w-auto object-contain"
+              />
+            </a>
+            <nav className="hidden md:flex items-center gap-6">
+              <a href="/#projects" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Projekte</a>
+              <a href="/immobilien" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Immobilien</a>
+              <a href="/service-pakete" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Services</a>
+              <a href="/#contact" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Kontakt</a>
+            </nav>
+            <div className="flex items-center gap-3">
+              {user ? (
+                <>
+                  <a href="/dashboard">
+                    <Button variant="outline" size="sm" className="border-gold text-gold hover:bg-gold hover:text-white">
+                      Dashboard
+                    </Button>
+                  </a>
+                  <Button variant="ghost" size="sm" onClick={() => logout()} className="text-muted-foreground hover:text-foreground">
+                    Abmelden
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <a href="/login">
+                    <Button variant="outline" size="sm" className="border-gold text-gold hover:bg-gold hover:text-white">
+                      Anmelden
+                    </Button>
+                  </a>
+                  <a href="/login">
+                    <Button size="sm" className="bg-gold text-white hover:bg-gold/90">
+                      Registrieren
+                    </Button>
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden hero-gradient">
+      <section className="relative min-h-[90vh] flex items-center overflow-hidden hero-gradient pt-20">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{ 
             backgroundImage: 'url(/images/tbilisi-skyline.jpg)',

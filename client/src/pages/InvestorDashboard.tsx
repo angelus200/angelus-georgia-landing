@@ -15,7 +15,7 @@ export default function InvestorDashboard() {
   const { data: payments, isLoading: paymentsLoading } = trpc.payments.getMyPayments.useQuery();
 
   if (!user) {
-    setLocation("/");
+    setLocation("/login");
     return null;
   }
 

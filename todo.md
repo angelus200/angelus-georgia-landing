@@ -115,3 +115,8 @@
 - [x] Krypto-Wallets Verwaltung funktioniert
 - [x] Bankkonten Verwaltung funktioniert
 - [x] Dienstleistungen Verwaltung funktioniert
+
+## Kunden-Login Verbesserungen
+- [x] Login-Button für Kunden in der Navigation hinzufügen
+- [x] Dashboard-Weiterleitung zur Login-Seite wenn nicht angemeldet
+- [x] Kunden-Login sichtbar auf der Startseite (Anmelden/Registrieren Buttons)
