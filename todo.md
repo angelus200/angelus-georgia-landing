@@ -50,3 +50,8 @@
 - [x] Problem identifiziert: Callback-URL muss in Manus-App-Einstellungen registriert werden
 - [x] Detaillierte Anleitung erstellt (OAUTH_CALLBACK_ANLEITUNG.md)
 - [ ] Benutzer muss Callback-URL in Manus-Plattform aktualisieren
+
+## OAuth-Session-Problem beheben
+- [x] Session-Cookie wird nach OAuth-Callback richtig gesetzt
+- [x] Admin-Seite erkennt angemeldeten Benutzer
+- [x] React-Hook-Fehler behoben (Hooks vor bedingten Returns verschoben)

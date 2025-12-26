@@ -31,7 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { toast } from "sonner";
@@ -54,27 +54,39 @@ type BookingStatus = "pending" | "confirmed" | "active" | "completed" | "cancell
 type PropertyStatus = "available" | "reserved" | "sold";
 
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-
-  // Redirect to login if not authenticated
-  if (!user) {
-    setLocation("/admin/login");
-    return null;
-  }
-
-  // Redirect if not admin
-  if (user.role !== "admin") {
-    setLocation("/dashboard");
-    return null;
-  }
   const [statusFilter, setStatusFilter] = useState<ContactStatus | "all">("all");
   const [selectedInquiry, setSelectedInquiry] = useState<number | null>(null);
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
 
+  // Property Form State - MUST be before any conditional returns
+  const [propertyForm, setPropertyForm] = useState({
+    title: "",
+    description: "",
+    location: "",
+    city: "Tiflis",
+    price: "",
+    area: "",
+    bedrooms: 2,
+    bathrooms: 1,
+    constructionStatus: "planning" as const,
+    completionDate: "",
+    images: "/images/modern-apartment.jpg",
+    expectedReturn: "",
+    rentalGuarantee: false,
+    installmentAvailable: true,
+    minDownPayment: "30",
+    maxInstallmentMonths: 36,
+  });
+
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Contact Inquiries
-  const { data: inquiries, isLoading: inquiriesLoading, refetch: refetchInquiries } = trpc.contact.list.useQuery();
+  const { data: inquiries, isLoading: inquiriesLoading, refetch: refetchInquiries } = trpc.contact.list.useQuery(
+    undefined,
+    { enabled: !!user && user.role === "admin" }
+  );
 
   const updateStatusMutation = trpc.contact.updateStatus.useMutation({
     onSuccess: () => {
@@ -98,7 +110,10 @@ export default function Admin() {
   });
 
   // Properties
-  const { data: properties, isLoading: propertiesLoading, refetch: refetchProperties } = trpc.properties.list.useQuery();
+  const { data: properties, isLoading: propertiesLoading, refetch: refetchProperties } = trpc.properties.list.useQuery(
+    undefined,
+    { enabled: !!user && user.role === "admin" }
+  );
 
   const createPropertyMutation = trpc.properties.create.useMutation({
     onSuccess: () => {
@@ -125,7 +140,10 @@ export default function Admin() {
   });
 
   // Bookings
-  const { data: bookings, isLoading: bookingsLoading, refetch: refetchBookings } = trpc.bookings.getAll.useQuery();
+  const { data: bookings, isLoading: bookingsLoading, refetch: refetchBookings } = trpc.bookings.getAll.useQuery(
+    undefined,
+    { enabled: !!user && user.role === "admin" }
+  );
 
   const updateBookingStatusMutation = trpc.bookings.updateStatus.useMutation({
     onSuccess: () => {
@@ -137,25 +155,39 @@ export default function Admin() {
     },
   });
 
-  // Property Form State
-  const [propertyForm, setPropertyForm] = useState({
-    title: "",
-    description: "",
-    location: "",
-    city: "Tiflis",
-    price: "",
-    area: "",
-    bedrooms: 2,
-    bathrooms: 1,
-    constructionStatus: "planning" as const,
-    completionDate: "",
-    images: "/images/modern-apartment.jpg",
-    expectedReturn: "",
-    rentalGuarantee: false,
-    installmentAvailable: true,
-    minDownPayment: "30",
-    maxInstallmentMonths: 36,
-  });
+  // Use useEffect for redirects to avoid calling setState during render
+  useEffect(() => {
+    if (loading) return; // Wait for auth check to complete
+    
+    if (!user) {
+      setLocation("/admin/login");
+      return;
+    }
+    
+    if (user.role !== "admin") {
+      setLocation("/dashboard");
+      return;
+    }
+  }, [user, loading, setLocation]);
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#C4A052] mx-auto mb-4" />
+          <p className="text-gray-600">Authentifizierung wird geprüft...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render admin content if not authenticated or not admin
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+
+  // All hooks are now called above - only helper functions below
 
   const handlePropertySubmit = (e: React.FormEvent) => {
     e.preventDefault();
