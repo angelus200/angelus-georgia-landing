@@ -134,3 +134,4 @@
 - [x] WhatsApp-Kanal-Link hinzufügen (https://whatsapp.com/channel/0029VbC18IWCsU9YyrOyj01N)
 - [x] Telegram-Kanal-Link hinzufügen (https://t.me/Angelus_Management_GeorgiaDE)
 - [x] Abonnieren-Buttons im Hero-Bereich und Footer
+- [x] Facebook-Seite hinzufügen (https://www.facebook.com/search/top?q=angelus%20management%20georgia)
