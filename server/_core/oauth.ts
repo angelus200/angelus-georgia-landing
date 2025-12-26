@@ -41,6 +41,7 @@ export function registerOAuthRoutes(app: Express) {
         expiresInMs: ONE_YEAR_MS,
       });
 
+      // Set cookie with multiple approaches for better browser compatibility
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
@@ -48,7 +49,12 @@ export function registerOAuthRoutes(app: Express) {
       const user = await db.getUserByOpenId(userInfo.openId);
       const redirectPath = user?.role === "admin" ? "/admin" : "/";
       
-      res.redirect(302, redirectPath);
+      // Pass session token as URL parameter as fallback for browsers that block cookies
+      // The client will read this and set the cookie manually
+      const redirectUrl = `${redirectPath}?_session=${encodeURIComponent(sessionToken)}`;
+      
+      console.log("[OAuth] Callback successful, redirecting to:", redirectPath);
+      res.redirect(302, redirectUrl);
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

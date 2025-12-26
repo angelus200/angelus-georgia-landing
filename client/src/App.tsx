@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -18,6 +19,32 @@ import InvestorDashboard from "./pages/InvestorDashboard";
 import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
 import ServicePackages from "./pages/ServicePackages";
+
+// Session token handler - reads session from URL and sets cookie
+function SessionHandler() {
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionToken = urlParams.get('_session');
+    
+    if (sessionToken) {
+      // Set the session cookie manually (for browsers that block server-set cookies)
+      const maxAge = 365 * 24 * 60 * 60; // 1 year in seconds
+      document.cookie = `app_session_id=${sessionToken}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+      
+      console.log("[Session] Cookie set from URL parameter");
+      
+      // Remove the session parameter from URL without reloading
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Force a page reload to apply the new session
+      window.location.reload();
+    }
+  }, []);
+  
+  return null;
+}
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -47,6 +74,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
+          <SessionHandler />
           <Toaster />
           <Router />
         </TooltipProvider>

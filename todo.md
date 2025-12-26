@@ -55,3 +55,9 @@
 - [x] Session-Cookie wird nach OAuth-Callback richtig gesetzt
 - [x] Admin-Seite erkennt angemeldeten Benutzer
 - [x] React-Hook-Fehler behoben (Hooks vor bedingten Returns verschoben)
+
+## OAuth-Session-Cookie Problem (kritisch)
+- [x] Session-Cookie wird jetzt vom Browser akzeptiert
+- [x] Cookie-Einstellungen überprüft (SameSite, Secure, Domain)
+- [x] OAuth-Callback debuggt und repariert
+- [x] Session-Token als URL-Parameter als Fallback implementiert
