@@ -57,8 +57,14 @@ export default function Admin() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Redirect to login if not authenticated
+  if (!user) {
+    setLocation("/admin/login");
+    return null;
+  }
+
   // Redirect if not admin
-  if (user && user.role !== "admin") {
+  if (user.role !== "admin") {
     setLocation("/dashboard");
     return null;
   }

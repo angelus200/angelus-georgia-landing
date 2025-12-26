@@ -19,3 +19,13 @@
 ## Admin-Testaccount
 - [x] Admin-Benutzer in der Datenbank erstellen
 - [x] Login-Daten dem Benutzer mitteilen
+
+## Login-Problem beheben
+- [x] Admin-Account in Datenbank überprüfen
+- [x] Login-Funktionalität testen
+- [x] Passwort-Hash validieren
+
+## Admin-Login-Seite korrigieren
+- [x] Admin-Seite zu /admin/login weiterleiten wenn nicht angemeldet
+- [x] Alle Login-Links korrigieren
+- [x] Lokale Authentifizierung testen

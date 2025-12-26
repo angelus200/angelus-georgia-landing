@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE users SET emailVerified = 1 WHERE email = 'admin@angelusgeorgia.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute UPDATE users SET emailVerified = 1 WHERE email = 'admin@angelusgeorgia.com';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1597
+}
