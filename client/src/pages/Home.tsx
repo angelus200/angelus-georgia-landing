@@ -97,6 +97,16 @@ export default function Home() {
                 >
                   Unsere Projekte
                 </Button>
+                {user ? (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => window.location.href = "/dashboard"}
+                    className="border-gold text-gold hover:bg-gold hover:text-white transition-all duration-300 text-lg px-8 py-6"
+                  >
+                    Mein Dashboard
+                  </Button>
+                ) : null}
               </div>
             </div>
 

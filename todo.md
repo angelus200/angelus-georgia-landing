@@ -15,3 +15,16 @@
 ## AGB
 - [x] AGB-Seite mit Immobilien-spezifischen Inhalten erstellen
 - [x] AGB-Link im Footer hinzufügen
+
+## Investor-Portal
+- [x] Datenbank-Schema für Immobilien erweitern
+- [x] Datenbank-Schema für Service-Pakete erstellen
+- [x] Datenbank-Schema für Buchungen erstellen
+- [x] Datenbank-Schema für Ratenzahlungen erstellen
+- [x] Investor-Dashboard mit geschütztem Bereich erstellen
+- [x] Immobilien-Katalog-Seite implementieren
+- [ ] Immobilien-Detailseite mit Ratenzahlungsrechner
+- [ ] Service-Pakete-Übersicht erstellen
+- [ ] Buchungssystem für Pakete implementieren
+- [ ] Ratenzahlungs-Management-Dashboard
+- [ ] Zahlungserinnerungen implementieren

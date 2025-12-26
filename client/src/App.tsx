@@ -9,6 +9,8 @@ import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import AGB from "./pages/AGB";
 import Admin from "./pages/Admin";
+import InvestorDashboard from "./pages/InvestorDashboard";
+import Properties from "./pages/Properties";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -18,6 +20,8 @@ function Router() {
       <Route path={"/datenschutz"} component={Datenschutz} />
       <Route path={"/agb"} component={AGB} />
       <Route path={"/admin"} component={Admin} />
+      <Route path={"/dashboard"} component={InvestorDashboard} />
+      <Route path={"/immobilien"} component={Properties} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
