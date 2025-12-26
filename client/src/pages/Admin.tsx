@@ -32,6 +32,8 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
+import { useLocation } from "wouter";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import { 
   Loader2, 
@@ -46,14 +48,20 @@ import {
   Package,
   CreditCard
 } from "lucide-react";
-import { Link } from "wouter";
 
 type ContactStatus = "new" | "contacted" | "closed";
 type BookingStatus = "pending" | "confirmed" | "active" | "completed" | "cancelled";
 type PropertyStatus = "available" | "reserved" | "sold";
 
 export default function Admin() {
-  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect if not admin
+  if (user && user.role !== "admin") {
+    setLocation("/dashboard");
+    return null;
+  }
   const [statusFilter, setStatusFilter] = useState<ContactStatus | "all">("all");
   const [selectedInquiry, setSelectedInquiry] = useState<number | null>(null);
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
@@ -206,7 +214,7 @@ export default function Admin() {
     setEditingProperty(null);
   };
 
-  if (authLoading) {
+  if (!user && !inquiries) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-gold" />
@@ -214,24 +222,19 @@ export default function Admin() {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Admin-Zugang</CardTitle>
+          <CardHeader className="text-center">
+            <CardTitle>Admin-Bereich</CardTitle>
             <CardDescription>
-              Bitte melden Sie sich an, um auf das Admin-Dashboard zuzugreifen.
+              Bitte melden Sie sich an, um auf den Admin-Bereich zuzugreifen
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              className="w-full"
-              onClick={() => {
-                window.location.href = getLoginUrl();
-              }}
-            >
-              Anmelden
+            <Button className="w-full" asChild>
+              <Link href="/admin/login">Anmelden</Link>
             </Button>
           </CardContent>
         </Card>

@@ -23,6 +23,10 @@ import {
   updatePaymentStatus
 } from "./db";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { getDb } from "./db";
+import { users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
 export const appRouter = router({
@@ -37,6 +41,84 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    register: publicProcedure
+      .input(
+        z.object({
+          name: z.string().min(2, "Name muss mindestens 2 Zeichen lang sein"),
+          email: z.string().email("Ungültige E-Mail-Adresse"),
+          password: z.string().min(8, "Passwort muss mindestens 8 Zeichen lang sein"),
+          role: z.enum(["user", "admin"]).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Check if user already exists
+        const existingUser = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+        if (existingUser.length > 0) {
+          throw new Error("E-Mail-Adresse bereits registriert");
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(input.password, 10);
+
+        // Create user
+        await db.insert(users).values({
+          name: input.name,
+          email: input.email,
+          passwordHash,
+          loginMethod: "local",
+          role: input.role || "user",
+        });
+
+        return { success: true, message: "Registrierung erfolgreich" };
+      }),
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email("Ungültige E-Mail-Adresse"),
+          password: z.string().min(1, "Passwort erforderlich"),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Find user by email
+        const userResult = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+        if (userResult.length === 0) {
+          throw new Error("Ungültige E-Mail oder Passwort");
+        }
+
+        const user = userResult[0];
+
+        // Check if user has a password (local auth)
+        if (!user.passwordHash) {
+          throw new Error("Dieser Account verwendet eine andere Anmeldemethode");
+        }
+
+        // Verify password
+        const isValid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!isValid) {
+          throw new Error("Ungültige E-Mail oder Passwort");
+        }
+
+        // Update last signed in
+        await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+
+        // Set session cookie (simplified - in production use proper session management)
+        // For now, return user data and let frontend handle it
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          },
+        };
+      }),
   }),
 
   contact: router({

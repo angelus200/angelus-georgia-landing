@@ -9,6 +9,8 @@ import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import AGB from "./pages/AGB";
 import Admin from "./pages/Admin";
+import AdminLogin from "./pages/AdminLogin";
+import Login from "./pages/Login";
 import InvestorDashboard from "./pages/InvestorDashboard";
 import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -20,6 +22,8 @@ function Router() {
       <Route path={"/impressum"} component={Impressum} />
       <Route path={"/datenschutz"} component={Datenschutz} />
       <Route path={"/agb"} component={AGB} />
+      <Route path={"/login"} component={Login} />
+      <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/dashboard"} component={InvestorDashboard} />
       <Route path={"/immobilien"} component={Properties} />

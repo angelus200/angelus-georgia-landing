@@ -42,3 +42,10 @@
 - [x] Admin-Immobilienverwaltung (Hinzufügen, Bearbeiten, Löschen)
 - [x] Admin-Buchungsverwaltung (Übersicht, Status-Updates)
 - [ ] Admin-Zahlungsverwaltung (Status-Updates, Übersicht)
+
+## Login-System
+- [x] Datenbank-Schema für lokale Benutzer erweitern (E-Mail, Passwort-Hash, Rolle)
+- [x] Backend-API für Registrierung und Login erstellen
+- [x] Admin-Login-Seite mit Manus OAuth und E-Mail/Passwort
+- [x] Kunden-Login/Registrierungs-Seite
+- [x] Rollen-basierte Zugriffskontrolle (Admin vs. Kunde)
