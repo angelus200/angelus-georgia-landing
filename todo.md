@@ -37,3 +37,8 @@
 - [x] Ratenzahlungsrechner implementieren
 - [ ] Service-Pakete Backend-API
 - [ ] Admin-Funktionen für Immobilienverwaltung
+
+## Admin-Backend
+- [x] Admin-Immobilienverwaltung (Hinzufügen, Bearbeiten, Löschen)
+- [x] Admin-Buchungsverwaltung (Übersicht, Status-Updates)
+- [ ] Admin-Zahlungsverwaltung (Status-Updates, Übersicht)
