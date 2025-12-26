@@ -126,4 +126,40 @@ export async function getAllContactInquiries() {
   }
 }
 
+/**
+ * Update contact inquiry status
+ */
+export async function updateContactInquiryStatus(id: number, status: "new" | "contacted" | "closed") {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update contact inquiry: database not available");
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.update(contactInquiries).set({ status }).where(eq(contactInquiries.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update contact inquiry:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete contact inquiry
+ */
+export async function deleteContactInquiry(id: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete contact inquiry: database not available");
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.delete(contactInquiries).where(eq(contactInquiries.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to delete contact inquiry:", error);
+    throw error;
+  }
+}
+
 // TODO: add feature queries here as your schema grows.

@@ -1,8 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
-import { createContactInquiry, getAllContactInquiries } from "./db";
+import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { createContactInquiry, getAllContactInquiries, updateContactInquiryStatus, deleteContactInquiry } from "./db";
 import { z } from "zod";
 import { notifyOwner } from "./_core/notification";
 
@@ -49,6 +49,23 @@ export const appRouter = router({
     list: publicProcedure.query(async () => {
       return await getAllContactInquiries();
     }),
+    updateStatus: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["new", "contacted", "closed"]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await updateContactInquiryStatus(input.id, input.status);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteContactInquiry(input.id);
+        return { success: true };
+      }),
   }),
 
   // TODO: add feature routers here, e.g.
