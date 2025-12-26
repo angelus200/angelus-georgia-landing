@@ -108,3 +108,10 @@
 - [x] Banküberweisung mit Zahlungsanweisungen
 - [x] Zahlungsstatus-Tracking
 - [ ] Bestellbestätigungen per E-Mail (optional)
+
+## Admin-Dashboard E-Commerce-Integration
+- [x] E-Commerce-Link im Admin-Dashboard hinzufügen
+- [x] Navigation zwischen Admin-Bereichen verbessern
+- [x] Krypto-Wallets Verwaltung funktioniert
+- [x] Bankkonten Verwaltung funktioniert
+- [x] Dienstleistungen Verwaltung funktioniert

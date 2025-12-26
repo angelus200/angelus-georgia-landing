@@ -1,0 +1,1 @@
+ALTER TABLE `crypto_wallets` MODIFY COLUMN `currency` varchar(20) NOT NULL;

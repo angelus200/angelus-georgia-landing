@@ -1,0 +1,26 @@
+{
+  "query": "SELECT * FROM crypto_wallets;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT * FROM crypto_wallets;",
+  "rows": [
+    {
+      "id": "1",
+      "currency": "BTC",
+      "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+      "label": "Haupt-BTC-Wallet",
+      "isActive": "1",
+      "createdAt": "2025-12-26 22:25:40"
+    },
+    {
+      "id": "2",
+      "currency": "BTC",
+      "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+      "label": "Haupt-BTC-Wallet",
+      "isActive": "1",
+      "createdAt": "2025-12-26 22:26:08"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcurrency\taddress\tlabel\tisActive\tcreatedAt\n1\tBTC\tbc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh\tHaupt-BTC-Wallet\t1\t2025-12-26 22:25:40\n2\tBTC\tbc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh\tHaupt-BTC-Wallet\t1\t2025-12-26 22:26:08\n",
+  "stderr": "",
+  "execution_time_ms": 1527
+}

@@ -97,9 +97,11 @@ function ServicesTab() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate({
-      ...formData,
-      durationMonths: formData.durationMonths ? parseInt(formData.durationMonths) : undefined,
-      processingTimeDays: formData.processingTimeDays ? parseInt(formData.processingTimeDays) : undefined,
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      price: formData.price,
+      isActive: true,
     });
   };
 
@@ -603,15 +605,11 @@ function BankAccountsTab() {
 
   const [formData, setFormData] = useState({
     bankName: "",
-    accountName: "",
+    accountHolder: "",
     iban: "",
-    swift: "",
-    accountNumber: "",
-    routingNumber: "",
+    bic: "",
     currency: "EUR",
-    country: "",
-    address: "",
-    isPrimary: false,
+    isActive: true,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -652,8 +650,8 @@ function BankAccountsTab() {
                 <div>
                   <Label>Kontoinhaber *</Label>
                   <Input
-                    value={formData.accountName}
-                    onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                    value={formData.accountHolder}
+                    onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
                     placeholder="Name des Kontoinhabers"
                     required
                   />
@@ -673,8 +671,8 @@ function BankAccountsTab() {
                 <div>
                   <Label>SWIFT/BIC</Label>
                   <Input
-                    value={formData.swift}
-                    onChange={(e) => setFormData({ ...formData, swift: e.target.value })}
+                    value={formData.bic}
+                    onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
                     placeholder="z.B. BAGAGE22"
                   />
                 </div>
@@ -694,24 +692,6 @@ function BankAccountsTab() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div>
-                <Label>Land</Label>
-                <Input
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  placeholder="z.B. Georgien"
-                />
-              </div>
-
-              <div>
-                <Label>Bankadresse</Label>
-                <Textarea
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Vollständige Bankadresse..."
-                />
               </div>
 
               <div className="flex justify-end gap-2">

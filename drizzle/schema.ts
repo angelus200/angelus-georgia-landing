@@ -368,7 +368,7 @@ export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;
  */
 export const cryptoWallets = mysqlTable("crypto_wallets", {
   id: int("id").autoincrement().primaryKey(),
-  currency: mysqlEnum("currency", ["BTC", "ETH", "USDT_ERC20", "USDT_TRC20"]).notNull(),
+  currency: varchar("currency", { length: 20 }).notNull(),
   address: varchar("address", { length: 255 }).notNull(),
   label: varchar("label", { length: 100 }),
   isActive: boolean("isActive").default(true).notNull(),

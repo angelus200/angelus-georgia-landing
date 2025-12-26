@@ -43,6 +43,13 @@
       "when": 1766785356825,
       "tag": "0005_naive_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1766787583446,
+      "tag": "0006_steep_fabian_cortez",
+      "breakpoints": true
     }
   ]
 }
