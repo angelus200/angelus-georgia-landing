@@ -15,15 +15,18 @@ export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.user.role !== "admin") {
         toast.error("Zugriff verweigert: Nur Administratoren können sich hier anmelden");
         return;
       }
       
       toast.success("Erfolgreich angemeldet!");
+      // Invalidate auth.me query to refetch user data
+      await utils.auth.me.invalidate();
       // Store user data in localStorage (simplified - in production use proper session management)
       localStorage.setItem("user", JSON.stringify(data.user));
       setLocation("/admin");
@@ -49,13 +52,11 @@ export default function AdminLogin() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <Link href="/">
-              <a>
-                <img
-                  src="/images/angelus-logo.png"
-                  alt="Angelus Management Georgia"
-                  className="h-16 w-auto object-contain"
-                />
-              </a>
+              <img
+                src="/images/angelus-logo.png"
+                alt="Angelus Management Georgia"
+                className="h-16 w-auto object-contain cursor-pointer"
+              />
             </Link>
           </div>
           <div className="flex items-center justify-center gap-2">
@@ -131,10 +132,8 @@ export default function AdminLogin() {
           </Button>
 
           <div className="text-center text-sm text-muted-foreground pt-4">
-            <Link href="/">
-              <a className="hover:text-gold hover:underline">
-                Zurück zur Startseite
-              </a>
+            <Link href="/" className="hover:text-gold hover:underline">
+              Zurück zur Startseite
             </Link>
           </div>
         </CardContent>

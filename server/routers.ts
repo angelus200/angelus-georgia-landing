@@ -127,8 +127,10 @@ export const appRouter = router({
         // Update last signed in
         await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
 
-        // Set session cookie (simplified - in production use proper session management)
-        // For now, return user data and let frontend handle it
+        // Set session cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, user.openId || `local_${user.id}`, cookieOptions);
+
         return {
           success: true,
           user: {

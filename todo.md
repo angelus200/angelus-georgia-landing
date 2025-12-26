@@ -32,3 +32,9 @@
 
 ## Admin-Login-Link auf Landing Page
 - [x] Admin-Login-Link im Footer hinzufügen
+
+## Admin-Login Weiterleitungsproblem
+- [x] Admin-Login-Seite analysieren - OAuth-Login funktioniert korrekt
+- [x] OAuth als empfohlene Login-Methode dokumentiert
+- [x] Admin-Zugangs-Dokumentation erstellt (ADMIN_ZUGANG.md)
+- [x] OAuth-Login-Flow getestet

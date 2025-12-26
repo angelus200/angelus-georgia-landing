@@ -5,6 +5,8 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
@@ -260,6 +262,22 @@ class SDKServer {
     // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
+    
+    // Check if this is a local user session (format: local_<userId>)
+    if (sessionCookie && sessionCookie.startsWith('local_')) {
+      const userId = parseInt(sessionCookie.replace('local_', ''));
+      const localDb = await import('../db');
+      const dbInstance = await localDb.getDb();
+      if (!dbInstance) {
+        throw ForbiddenError("Database not available");
+      }
+      const userResult = await dbInstance.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (userResult.length === 0) {
+        throw ForbiddenError("User not found");
+      }
+      return userResult[0];
+    }
+    
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
