@@ -38,3 +38,9 @@
 - [x] OAuth als empfohlene Login-Methode dokumentiert
 - [x] Admin-Zugangs-Dokumentation erstellt (ADMIN_ZUGANG.md)
 - [x] OAuth-Login-Flow getestet
+
+## OAuth-Benutzer Admin-Rechte geben
+- [x] Benutzer in Datenbank gefunden (grossdigitalpartner@gmail.com)
+- [x] Admin-Rolle bereits gesetzt
+- [x] OAuth-Callback angepasst - Admin-Benutzer werden jetzt automatisch zu /admin weitergeleitet
+- [x] Admin-Zugang testen

@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, name, email, role, \"openId\" FROM users ORDER BY \"createdAt\" DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT id, name, email, role, \"openId\" FROM users ORDER BY \"createdAt\" DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Thomas Gross",
+      "email": "grossdigitalpartner@gmail.com",
+      "role": "admin",
+      "openId": "openId"
+    },
+    {
+      "id": "27",
+      "name": "Admin Test",
+      "email": "admin@angelusgeorgia.com",
+      "role": "admin",
+      "openId": "openId"
+    },
+    {
+      "id": "40",
+      "name": "thomasgross65",
+      "email": "thomasgross65@gmail.com",
+      "role": "user",
+      "openId": "openId"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\topenId\n1\tThomas Gross\tgrossdigitalpartner@gmail.com\tadmin\topenId\n27\tAdmin Test\tadmin@angelusgeorgia.com\tadmin\topenId\n40\tthomasgross65\tthomasgross65@gmail.com\tuser\topenId\n",
+  "stderr": "",
+  "execution_time_ms": 2679
+}

@@ -1,0 +1,61 @@
+{
+  "query": "SELECT * FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT * FROM users;",
+  "rows": [
+    {
+      "id": "1",
+      "openId": "NRPYhsjaMTQuYn5ev53boU",
+      "name": "Thomas Gross",
+      "email": "grossdigitalpartner@gmail.com",
+      "loginMethod": "google",
+      "role": "admin",
+      "createdAt": "2025-12-26 17:41:02",
+      "updatedAt": "2025-12-26 20:15:14",
+      "lastSignedIn": "2025-12-26 20:15:15",
+      "passwordHash": "NULL",
+      "emailVerified": "0",
+      "verificationToken": "NULL",
+      "verificationTokenExpiry": "NULL",
+      "passwordResetToken": "NULL",
+      "passwordResetTokenExpiry": "NULL"
+    },
+    {
+      "id": "27",
+      "openId": "NULL",
+      "name": "Admin Test",
+      "email": "admin@angelusgeorgia.com",
+      "loginMethod": "local",
+      "role": "admin",
+      "createdAt": "2025-12-26 19:27:50",
+      "updatedAt": "2025-12-26 20:11:35",
+      "lastSignedIn": "2025-12-26 20:11:35",
+      "passwordHash": "$2b$10$zyN5d6d44Y4V8nA0b6fkpOzmj7ANEUvDWITiGZ8R2.Y7KD0qRMSJ6",
+      "emailVerified": "1",
+      "verificationToken": "NULL",
+      "verificationTokenExpiry": "NULL",
+      "passwordResetToken": "NULL",
+      "passwordResetTokenExpiry": "NULL"
+    },
+    {
+      "id": "40",
+      "openId": "9J2tjvkyMMRnzRrp2kFo2X",
+      "name": "thomasgross65",
+      "email": "thomasgross65@gmail.com",
+      "loginMethod": "google",
+      "role": "user",
+      "createdAt": "2025-12-26 20:11:59",
+      "updatedAt": "2025-12-26 20:12:00",
+      "lastSignedIn": "2025-12-26 20:12:00",
+      "passwordHash": "NULL",
+      "emailVerified": "0",
+      "verificationToken": "NULL",
+      "verificationTokenExpiry": "NULL",
+      "passwordResetToken": "NULL",
+      "passwordResetTokenExpiry": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\topenId\tname\temail\tloginMethod\trole\tcreatedAt\tupdatedAt\tlastSignedIn\tpasswordHash\temailVerified\tverificationToken\tverificationTokenExpiry\tpasswordResetToken\tpasswordResetTokenExpiry\n1\tNRPYhsjaMTQuYn5ev53boU\tThomas Gross\tgrossdigitalpartner@gmail.com\tgoogle\tadmin\t2025-12-26 17:41:02\t2025-12-26 20:15:14\t2025-12-26 20:15:15\tNULL\t0\tNULL\tNULL\tNULL\tNULL\n27\tNULL\tAdmin Test\tadmin@angelusgeorgia.com\tlocal\tadmin\t2025-12-26 19:27:50\t2025-12-26 20:11:35\t2025-12-26 20:11:35\t$2b$10$zyN5d6d44Y4V8nA0b6fkpOzmj7ANEUvDWITiGZ8R2.Y7KD0qRMSJ6\t1\tNULL\tNULL\tNULL\tNULL\n40\t9J2tjvkyMMRnzRrp2kFo2X\tthomasgross65\tthomasgross65@gmail.com\tgoogle\tuser\t2025-12-26 20:11:59\t2025-12-26 20:12:00\t2025-12-26 20:12:00\tNULL\t0\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 2802
+}
