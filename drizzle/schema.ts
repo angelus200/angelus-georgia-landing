@@ -24,6 +24,23 @@ export const users = mysqlTable("users", {
   verificationTokenExpiry: timestamp("verificationTokenExpiry"),
   passwordResetToken: varchar("passwordResetToken", { length: 255 }),
   passwordResetTokenExpiry: timestamp("passwordResetTokenExpiry"),
+  /** Customer profile fields */
+  firstName: varchar("firstName", { length: 100 }),
+  lastName: varchar("lastName", { length: 100 }),
+  phone: varchar("phone", { length: 50 }),
+  /** Full address */
+  street: varchar("street", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  postalCode: varchar("postalCode", { length: 20 }),
+  country: varchar("country", { length: 100 }),
+  /** Date of birth for verification */
+  dateOfBirth: timestamp("dateOfBirth"),
+  /** ID document type */
+  idDocumentType: mysqlEnum("idDocumentType", ["passport", "id_card", "drivers_license"]),
+  /** ID document number */
+  idDocumentNumber: varchar("idDocumentNumber", { length: 100 }),
+  /** Profile completion status */
+  profileComplete: boolean("profileComplete").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

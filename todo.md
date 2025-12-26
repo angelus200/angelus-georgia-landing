@@ -120,3 +120,12 @@
 - [x] Login-Button für Kunden in der Navigation hinzufügen
 - [x] Dashboard-Weiterleitung zur Login-Seite wenn nicht angemeldet
 - [x] Kunden-Login sichtbar auf der Startseite (Anmelden/Registrieren Buttons)
+
+## Registrierung und Kundendaten
+- [x] Benutzer-Schema erweitern: Adresse, Telefon, Geburtsdatum, Verifizierungsstatus
+- [x] E-Mail-Verifizierung bei Registrierung implementieren
+- [x] Verifizierungs-E-Mail mit Bestätigungslink senden
+- [x] Registrierungsformular mit Pflichtfeldern erweitern (Name, Adresse, Telefon)
+- [x] Login nur für verifizierte Benutzer erlauben
+- [ ] Profil-Seite für Kunden erstellen (optional)
+- [ ] Checkout nur für verifizierte Benutzer mit vollständigem Profil erlauben (optional)

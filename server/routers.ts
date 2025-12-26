@@ -58,6 +58,14 @@ export const appRouter = router({
           email: z.string().email("Ungültige E-Mail-Adresse"),
           password: z.string().min(8, "Passwort muss mindestens 8 Zeichen lang sein"),
           role: z.enum(["user", "admin"]).optional(),
+          // Extended profile fields
+          firstName: z.string().min(1, "Vorname erforderlich").optional(),
+          lastName: z.string().min(1, "Nachname erforderlich").optional(),
+          phone: z.string().min(5, "Telefonnummer erforderlich").optional(),
+          street: z.string().min(3, "Straße erforderlich").optional(),
+          city: z.string().min(2, "Stadt erforderlich").optional(),
+          postalCode: z.string().min(3, "Postleitzahl erforderlich").optional(),
+          country: z.string().min(2, "Land erforderlich").optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -73,26 +81,33 @@ export const appRouter = router({
         // Hash password
         const passwordHash = await bcrypt.hash(input.password, 10);
 
-        // Create user
+        // Generate verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // Check if profile is complete
+        const profileComplete = !!(input.firstName && input.lastName && input.phone && 
+                                   input.street && input.city && input.postalCode && input.country);
+
+        // Create user with all profile data
         await db.insert(users).values({
           name: input.name,
           email: input.email,
           passwordHash,
           loginMethod: "local",
           role: input.role || "user",
+          firstName: input.firstName,
+          lastName: input.lastName,
+          phone: input.phone,
+          street: input.street,
+          city: input.city,
+          postalCode: input.postalCode,
+          country: input.country,
+          profileComplete,
+          verificationToken,
+          verificationTokenExpiry,
+          emailVerified: false,
         });
-
-        // Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-        // Update user with verification token
-        await db.update(users)
-          .set({
-            verificationToken,
-            verificationTokenExpiry,
-          })
-          .where(eq(users.email, input.email));
 
         // Send verification email
         await sendEmailVerification(input.email, verificationToken);
@@ -130,6 +145,11 @@ export const appRouter = router({
         const isValid = await bcrypt.compare(input.password, user.passwordHash);
         if (!isValid) {
           throw new Error("Ungültige E-Mail oder Passwort");
+        }
+
+        // Check if email is verified
+        if (!user.emailVerified) {
+          throw new Error("Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Prüfen Sie Ihren Posteingang.");
         }
 
         // Update last signed in
