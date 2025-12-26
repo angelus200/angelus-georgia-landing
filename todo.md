@@ -28,3 +28,12 @@
 - [ ] Buchungssystem für Pakete implementieren
 - [ ] Ratenzahlungs-Management-Dashboard
 - [ ] Zahlungserinnerungen implementieren
+
+## Backend-Integration
+- [x] Backend-API für Immobilien-Abfragen erstellen
+- [x] Backend-API für Buchungen erstellen
+- [x] Backend-API für Ratenzahlungen erstellen
+- [x] Immobilien-Detailseite mit Buchungsfunktion
+- [x] Ratenzahlungsrechner implementieren
+- [ ] Service-Pakete Backend-API
+- [ ] Admin-Funktionen für Immobilienverwaltung

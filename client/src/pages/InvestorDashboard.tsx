@@ -10,11 +10,9 @@ export default function InvestorDashboard() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Placeholder queries - will be implemented in backend
-  const bookings: any[] = [];
-  const payments: any[] = [];
-  const bookingsLoading = false;
-  const paymentsLoading = false;
+  // Real backend queries
+  const { data: bookings, isLoading: bookingsLoading } = trpc.bookings.getMyBookings.useQuery();
+  const { data: payments, isLoading: paymentsLoading } = trpc.payments.getMyPayments.useQuery();
 
   if (!user) {
     setLocation("/");

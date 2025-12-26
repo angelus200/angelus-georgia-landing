@@ -11,6 +11,7 @@ import AGB from "./pages/AGB";
 import Admin from "./pages/Admin";
 import InvestorDashboard from "./pages/InvestorDashboard";
 import Properties from "./pages/Properties";
+import PropertyDetail from "./pages/PropertyDetail";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/admin"} component={Admin} />
       <Route path={"/dashboard"} component={InvestorDashboard} />
       <Route path={"/immobilien"} component={Properties} />
+      <Route path={"/immobilien/:id"} component={PropertyDetail} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
