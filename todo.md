@@ -11,3 +11,7 @@
 ## Footer-Links
 - [x] Datenschutzerklärung-Seite erstellen
 - [x] Footer-Links für Datenschutz und Impressum hinzufügen
+
+## AGB
+- [x] AGB-Seite mit Immobilien-spezifischen Inhalten erstellen
+- [x] AGB-Link im Footer hinzufügen
