@@ -518,6 +518,98 @@ export const appRouter = router({
   payment: paymentRouter,
   propertyMedia: propertyMediaRouter,
   adminProperties: adminPropertiesRouter,
+
+  // Profile Router
+  profile: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      if (user.length === 0) {
+        throw new Error("User not found");
+      }
+      
+      const { passwordHash, ...userWithoutPassword } = user[0];
+      return userWithoutPassword;
+    }),
+    
+    update: protectedProcedure
+      .input(
+        z.object({
+          firstName: z.string().min(1).optional(),
+          lastName: z.string().min(1).optional(),
+          phone: z.string().min(5).optional(),
+          street: z.string().min(3).optional(),
+          city: z.string().min(2).optional(),
+          postalCode: z.string().min(3).optional(),
+          country: z.string().min(2).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("User not authenticated");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(users)
+          .set({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            phone: input.phone,
+            street: input.street,
+            city: input.city,
+            postalCode: input.postalCode,
+            country: input.country,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, ctx.user.id));
+        
+        return { success: true };
+      }),
+    
+    changePassword: protectedProcedure
+      .input(
+        z.object({
+          currentPassword: z.string().min(1, "Aktuelles Passwort erforderlich"),
+          newPassword: z.string().min(8, "Neues Passwort muss mindestens 8 Zeichen lang sein"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("User not authenticated");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        if (user.length === 0) {
+          throw new Error("User not found");
+        }
+        
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(input.currentPassword, user[0].passwordHash || "");
+        if (!isValidPassword) {
+          throw new Error("Aktuelles Passwort ist falsch");
+        }
+        
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+        
+        await db.update(users)
+          .set({
+            passwordHash: hashedPassword,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, ctx.user.id));
+        
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

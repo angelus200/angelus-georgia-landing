@@ -40,10 +40,12 @@ export default function InvestorDashboard() {
               </a>
             </Link>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-gold" />
-                <span className="font-medium">{user.name || user.email}</span>
-              </div>
+              <Link href="/profil">
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gold" />
+                  <span className="font-medium">{user.name || user.email}</span>
+                </Button>
+              </Link>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Abmelden

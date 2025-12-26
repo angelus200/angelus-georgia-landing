@@ -127,7 +127,10 @@
 - [x] Verifizierungs-E-Mail mit Bestätigungslink senden
 - [x] Registrierungsformular mit Pflichtfeldern erweitern (Name, Adresse, Telefon)
 - [x] Login nur für verifizierte Benutzer erlauben
-- [ ] Profil-Seite für Kunden erstellen (optional)
+- [x] Profil-Seite für Kunden erstellen
+  - [x] Backend-API für Profil-Update
+  - [x] Frontend Profil-Seite mit Formular
+  - [x] Passwort ändern Funktion
 - [ ] Checkout nur für verifizierte Benutzer mit vollständigem Profil erlauben (optional)
 
 ## Social Media Integration

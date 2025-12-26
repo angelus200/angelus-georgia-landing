@@ -25,6 +25,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import MyOrders from "./pages/MyOrders";
+import Profile from "./pages/Profile";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -75,6 +76,7 @@ function Router() {
       <Route path={"/checkout"} component={Checkout} />
       <Route path={"/bestellung/:orderNumber"} component={OrderConfirmation} />
       <Route path={"/meine-bestellungen"} component={MyOrders} />
+      <Route path={"/profil"} component={Profile} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
