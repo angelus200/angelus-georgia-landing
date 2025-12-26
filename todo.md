@@ -15,3 +15,7 @@
 - [x] Preise und Beschreibungen hinzufügen
 - [x] Buchungsfunktion für Service-Pakete implementieren
 - [x] Route zur Navigation hinzufügen
+
+## Admin-Testaccount
+- [x] Admin-Benutzer in der Datenbank erstellen
+- [x] Login-Daten dem Benutzer mitteilen
