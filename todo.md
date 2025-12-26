@@ -129,3 +129,8 @@
 - [x] Login nur für verifizierte Benutzer erlauben
 - [ ] Profil-Seite für Kunden erstellen (optional)
 - [ ] Checkout nur für verifizierte Benutzer mit vollständigem Profil erlauben (optional)
+
+## Social Media Integration
+- [x] WhatsApp-Kanal-Link hinzufügen (https://whatsapp.com/channel/0029VbC18IWCsU9YyrOyj01N)
+- [x] Telegram-Kanal-Link hinzufügen (https://t.me/Angelus_Management_GeorgiaDE)
+- [x] Abonnieren-Buttons im Hero-Bereich und Footer
