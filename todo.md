@@ -53,3 +53,13 @@
 ## Navigation & Login-Links
 - [x] "Mein Dashboard"-Button auf Startseite zur Login-Seite verlinken
 - [ ] Navigation im Header erweitern (Login/Logout, Benutzername anzeigen)
+
+## E-Mail-System & Sicherheit
+- [x] Resend-Integration einrichten
+- [x] E-Mail-Service-Modul erstellen
+- [ ] "Passwort vergessen"-Funktion mit Reset-Links
+- [ ] E-Mail-Verifizierung bei Registrierung
+- [ ] Willkommens-E-Mails nach Registrierung
+- [ ] Buchungsbestätigungs-E-Mails
+- [ ] JWT-Token-basiertes Session-Management
+- [ ] HTTP-only Cookies für Tokens

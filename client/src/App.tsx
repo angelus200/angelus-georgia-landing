@@ -11,6 +11,9 @@ import AGB from "./pages/AGB";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import InvestorDashboard from "./pages/InvestorDashboard";
 import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -23,6 +26,9 @@ function Router() {
       <Route path={"/datenschutz"} component={Datenschutz} />
       <Route path={"/agb"} component={AGB} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/forgot-password"} component={ForgotPassword} />
+      <Route path={"/reset-password"} component={ResetPassword} />
+      <Route path={"/verify-email"} component={VerifyEmail} />
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/dashboard"} component={InvestorDashboard} />

@@ -28,6 +28,8 @@ import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
+import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail } from "./email";
+import crypto from "crypto";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -72,7 +74,25 @@ export const appRouter = router({
           role: input.role || "user",
         });
 
-        return { success: true, message: "Registrierung erfolgreich" };
+        // Generate verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // Update user with verification token
+        await db.update(users)
+          .set({
+            verificationToken,
+            verificationTokenExpiry,
+          })
+          .where(eq(users.email, input.email));
+
+        // Send verification email
+        await sendEmailVerification(input.email, verificationToken);
+        
+        // Send welcome email
+        await sendWelcomeEmail(input.email, input.name);
+
+        return { success: true, message: "Registrierung erfolgreich. Bitte bestätigen Sie Ihre E-Mail-Adresse." };
       }),
     login: publicProcedure
       .input(
@@ -118,6 +138,114 @@ export const appRouter = router({
             role: user.role,
           },
         };
+      }),
+    requestPasswordReset: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email("Ungültige E-Mail-Adresse"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Find user by email
+        const userResult = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+        if (userResult.length === 0) {
+          // Don't reveal if email exists or not for security
+          return { success: true, message: "Wenn die E-Mail-Adresse existiert, wurde ein Reset-Link gesendet." };
+        }
+
+        const user = userResult[0];
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // Update user with reset token
+        await db.update(users)
+          .set({
+            passwordResetToken: resetToken,
+            passwordResetTokenExpiry: resetTokenExpiry,
+          })
+          .where(eq(users.id, user.id));
+
+        // Send reset email
+        await sendPasswordResetEmail(input.email, resetToken);
+
+        return { success: true, message: "Wenn die E-Mail-Adresse existiert, wurde ein Reset-Link gesendet." };
+      }),
+    resetPassword: publicProcedure
+      .input(
+        z.object({
+          token: z.string(),
+          newPassword: z.string().min(8, "Passwort muss mindestens 8 Zeichen lang sein"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Find user by reset token
+        const userResult = await db.select().from(users).where(eq(users.passwordResetToken, input.token)).limit(1);
+        if (userResult.length === 0) {
+          throw new Error("Ungültiger oder abgelaufener Reset-Link");
+        }
+
+        const user = userResult[0];
+
+        // Check if token is expired
+        if (!user.passwordResetTokenExpiry || user.passwordResetTokenExpiry < new Date()) {
+          throw new Error("Ungültiger oder abgelaufener Reset-Link");
+        }
+
+        // Hash new password
+        const passwordHash = await bcrypt.hash(input.newPassword, 10);
+
+        // Update user password and clear reset token
+        await db.update(users)
+          .set({
+            passwordHash,
+            passwordResetToken: null,
+            passwordResetTokenExpiry: null,
+          })
+          .where(eq(users.id, user.id));
+
+        return { success: true, message: "Passwort erfolgreich zurückgesetzt" };
+      }),
+    verifyEmail: publicProcedure
+      .input(
+        z.object({
+          token: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Find user by verification token
+        const userResult = await db.select().from(users).where(eq(users.verificationToken, input.token)).limit(1);
+        if (userResult.length === 0) {
+          throw new Error("Ungültiger oder abgelaufener Verifizierungs-Link");
+        }
+
+        const user = userResult[0];
+
+        // Check if token is expired
+        if (!user.verificationTokenExpiry || user.verificationTokenExpiry < new Date()) {
+          throw new Error("Ungültiger oder abgelaufener Verifizierungs-Link");
+        }
+
+        // Update user email verified status and clear verification token
+        await db.update(users)
+          .set({
+            emailVerified: true,
+            verificationToken: null,
+            verificationTokenExpiry: null,
+          })
+          .where(eq(users.id, user.id));
+
+        return { success: true, message: "E-Mail erfolgreich verifiziert" };
       }),
   }),
 
