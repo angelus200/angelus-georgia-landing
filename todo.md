@@ -214,3 +214,11 @@
 - [x] Lead-Erfassung (E-Mail) vor Ergebnisanzeige
 - [x] CRM-Integration: Leads automatisch anlegen
 - [x] Call-to-Action mit passenden Immobilien
+
+## Manus Forge Chatbot
+- [x] Chatbot-Komponente mit Floating-Button erstellen
+- [x] Manus Forge API Integration
+- [x] System-Prompt mit Firmenkontext (Services, Immobilien, FAQs)
+- [x] Quick-Reply Buttons für häufige Fragen
+- [x] Lead-Erfassung bei Interesse
+- [x] In alle Seiten einbinden

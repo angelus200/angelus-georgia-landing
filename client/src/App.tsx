@@ -29,6 +29,7 @@ import Profile from "./pages/Profile";
 import CRM from "./pages/CRM";
 import Videos from "./pages/Videos";
 import InvestmentTest from "./pages/InvestmentTest";
+import Chatbot from "./components/Chatbot";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -97,6 +98,7 @@ function App() {
           <SessionHandler />
           <Toaster />
           <Router />
+          <Chatbot />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
