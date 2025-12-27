@@ -83,6 +83,7 @@ export default function CRM() {
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Fetch data
   const { data: leads, refetch: refetchLeads } = trpc.crm.leads.list.useQuery();
@@ -198,6 +199,10 @@ export default function CRM() {
                   className="pl-10 w-64"
                 />
               </div>
+              <Button variant="outline" onClick={() => setShowImportModal(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                CSV Import
+              </Button>
               <Button onClick={() => setShowNewLeadModal(true)} className="bg-gold hover:bg-gold/90">
                 <Plus className="h-4 w-4 mr-2" />
                 Neuer Lead
@@ -484,6 +489,17 @@ export default function CRM() {
           }}
           onDelete={() => deleteLeadMutation.mutate({ id: selectedLead.id })}
           onUpdate={() => refetchLeads()}
+        />
+      )}
+
+      {/* CSV Import Modal */}
+      {showImportModal && (
+        <CSVImportModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            refetchLeads();
+            setShowImportModal(false);
+          }}
         />
       )}
     </div>
@@ -1237,6 +1253,339 @@ function DocumentsTab({
           <p className="text-sm mt-1">Laden Sie Verträge, Ausweise oder andere Dokumente hoch</p>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// CSV Import Modal Component
+function CSVImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'result'>('upload');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<string>('');
+  const [previewData, setPreviewData] = useState<{ headers: string[]; previewRows: Record<string, string>[]; totalRows: number } | null>(null);
+  const [mapping, setMapping] = useState<Record<string, string>>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    company: '',
+    country: '',
+    city: '',
+    budgetMin: '',
+    budgetMax: '',
+    notes: '',
+    source: '',
+  });
+  const [defaultSource, setDefaultSource] = useState<string>('other');
+  const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
+
+  const previewMutation = trpc.crm.import.preview.useMutation({
+    onSuccess: (data) => {
+      setPreviewData(data);
+      // Auto-map common column names
+      const autoMapping: Record<string, string> = {};
+      const headerLower = data.headers.map(h => h.toLowerCase());
+      
+      // Auto-detect common column names
+      const mappings: Record<string, string[]> = {
+        firstName: ['vorname', 'first name', 'firstname', 'first_name', 'name'],
+        lastName: ['nachname', 'last name', 'lastname', 'last_name', 'surname'],
+        email: ['email', 'e-mail', 'mail', 'email address'],
+        phone: ['telefon', 'phone', 'tel', 'telephone', 'mobile', 'handy'],
+        company: ['firma', 'company', 'unternehmen', 'organization'],
+        country: ['land', 'country'],
+        city: ['stadt', 'city', 'ort'],
+        budgetMin: ['budget min', 'budget_min', 'min budget', 'mindestbudget'],
+        budgetMax: ['budget max', 'budget_max', 'max budget', 'maxbudget'],
+        notes: ['notizen', 'notes', 'bemerkungen', 'kommentar', 'comment'],
+        source: ['quelle', 'source', 'herkunft'],
+      };
+      
+      for (const [field, aliases] of Object.entries(mappings)) {
+        for (const alias of aliases) {
+          const index = headerLower.indexOf(alias);
+          if (index !== -1) {
+            autoMapping[field] = data.headers[index];
+            break;
+          }
+        }
+      }
+      
+      setMapping(prev => ({ ...prev, ...autoMapping }));
+      setStep('mapping');
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Lesen der CSV: ${error.message}`);
+    },
+  });
+
+  const importMutation = trpc.crm.import.csv.useMutation({
+    onSuccess: (data) => {
+      setImportResult(data);
+      setStep('result');
+      if (data.success > 0) {
+        toast.success(`${data.success} Leads erfolgreich importiert`);
+      }
+    },
+    onError: (error) => {
+      toast.error(`Import fehlgeschlagen: ${error.message}`);
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCsvFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = btoa(reader.result as string);
+        setCsvData(base64);
+      };
+      reader.readAsBinaryString(file);
+    }
+  };
+
+  const handlePreview = () => {
+    if (csvData) {
+      previewMutation.mutate({ csvData });
+    }
+  };
+
+  const handleImport = () => {
+    setStep('importing');
+    importMutation.mutate({
+      csvData,
+      mapping: {
+        firstName: mapping.firstName || undefined,
+        lastName: mapping.lastName || undefined,
+        email: mapping.email,
+        phone: mapping.phone || undefined,
+        company: mapping.company || undefined,
+        country: mapping.country || undefined,
+        city: mapping.city || undefined,
+        budgetMin: mapping.budgetMin || undefined,
+        budgetMax: mapping.budgetMax || undefined,
+        notes: mapping.notes || undefined,
+        source: mapping.source || undefined,
+      },
+      defaultSource: defaultSource as any,
+    });
+  };
+
+  const LEAD_FIELDS = [
+    { key: 'firstName', label: 'Vorname', required: false },
+    { key: 'lastName', label: 'Nachname', required: false },
+    { key: 'email', label: 'E-Mail', required: true },
+    { key: 'phone', label: 'Telefon', required: false },
+    { key: 'company', label: 'Firma', required: false },
+    { key: 'country', label: 'Land', required: false },
+    { key: 'city', label: 'Stadt', required: false },
+    { key: 'budgetMin', label: 'Budget Min', required: false },
+    { key: 'budgetMax', label: 'Budget Max', required: false },
+    { key: 'notes', label: 'Notizen', required: false },
+    { key: 'source', label: 'Quelle', required: false },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Leads aus CSV importieren</h2>
+            <p className="text-sm text-gray-500">
+              {step === 'upload' && 'Schritt 1: CSV-Datei hochladen'}
+              {step === 'mapping' && 'Schritt 2: Spalten zuordnen'}
+              {step === 'importing' && 'Import läuft...'}
+              {step === 'result' && 'Import abgeschlossen'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {step === 'upload' && (
+            <div className="space-y-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600 mb-4">
+                  CSV-Datei hier ablegen oder klicken zum Auswählen
+                </p>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label htmlFor="csv-upload">
+                  <Button variant="outline" className="cursor-pointer" asChild>
+                    <span>Datei auswählen</span>
+                  </Button>
+                </label>
+                {csvFile && (
+                  <p className="mt-4 text-sm text-green-600">
+                    ✓ {csvFile.name} ausgewählt
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium mb-2">Hinweise zum CSV-Format:</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Die erste Zeile muss die Spaltenüberschriften enthalten</li>
+                  <li>• Unterstützte Trennzeichen: Komma (,) oder Semikolon (;)</li>
+                  <li>• E-Mail ist das einzige Pflichtfeld</li>
+                  <li>• UTF-8 Kodierung wird empfohlen</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handlePreview} 
+                  disabled={!csvFile || previewMutation.isPending}
+                  className="bg-gold hover:bg-gold/90"
+                >
+                  {previewMutation.isPending ? 'Wird gelesen...' : 'Weiter'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'mapping' && previewData && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800">
+                  <strong>{previewData.totalRows}</strong> Datensätze gefunden. 
+                  Ordnen Sie die CSV-Spalten den Lead-Feldern zu.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {LEAD_FIELDS.map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-sm font-medium mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    <select
+                      value={mapping[field.key as keyof typeof mapping]}
+                      onChange={(e) => setMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      className="w-full border rounded-md p-2"
+                    >
+                      <option value="">-- Nicht zuordnen --</option>
+                      {previewData.headers.map((header) => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Standard-Quelle für alle Leads</label>
+                <select
+                  value={defaultSource}
+                  onChange={(e) => setDefaultSource(e.target.value)}
+                  className="w-full border rounded-md p-2"
+                >
+                  {Object.entries(SOURCE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview Table */}
+              <div>
+                <h4 className="font-medium mb-2">Vorschau (erste 5 Zeilen)</h4>
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        {previewData.headers.map((header) => (
+                          <th key={header} className="p-2 text-left font-medium">{header}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.previewRows.map((row, i) => (
+                        <tr key={i} className="border-t">
+                          {previewData.headers.map((header) => (
+                            <td key={header} className="p-2 truncate max-w-[150px]">{row[header]}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep('upload')}>
+                  Zurück
+                </Button>
+                <Button 
+                  onClick={handleImport} 
+                  disabled={!mapping.email}
+                  className="bg-gold hover:bg-gold/90"
+                >
+                  {previewData.totalRows} Leads importieren
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'importing' && (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold mx-auto mb-4"></div>
+              <p className="text-gray-600">Leads werden importiert...</p>
+              <p className="text-sm text-gray-500 mt-2">Dies kann einen Moment dauern.</p>
+            </div>
+          )}
+
+          {step === 'result' && importResult && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-green-600">{importResult.success}</div>
+                  <div className="text-green-800">Erfolgreich importiert</div>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-red-600">{importResult.failed}</div>
+                  <div className="text-red-800">Fehlgeschlagen</div>
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2 text-red-600">Fehler:</h4>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    {importResult.errors.slice(0, 20).map((error, i) => (
+                      <div key={i} className="text-sm text-red-800">
+                        Zeile {error.row}: {error.error}
+                      </div>
+                    ))}
+                    {importResult.errors.length > 20 && (
+                      <div className="text-sm text-red-600 mt-2">
+                        ... und {importResult.errors.length - 20} weitere Fehler
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button onClick={onSuccess} className="bg-gold hover:bg-gold/90">
+                  Schließen
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

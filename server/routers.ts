@@ -61,6 +61,47 @@ import { notifyOwner } from "./_core/notification";
 import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail } from "./email";
 import crypto from "crypto";
 
+// Helper function to parse CSV line (handles quoted values)
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+    
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        // Escaped quote
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        // End of quoted field
+        inQuotes = false;
+      } else {
+        current += char;
+      }
+    } else {
+      if (char === '"') {
+        // Start of quoted field
+        inQuotes = true;
+      } else if (char === ',' || char === ';') {
+        // Field separator (support both comma and semicolon)
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+  }
+  
+  // Don't forget the last field
+  result.push(current.trim());
+  
+  return result;
+}
+
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
@@ -839,6 +880,168 @@ export const appRouter = router({
           }
           
           return { success: true };
+        }),
+    }),
+
+    // CSV Import
+    import: router({
+      csv: protectedProcedure
+        .input(z.object({
+          csvData: z.string(), // Base64 encoded CSV
+          mapping: z.object({
+            firstName: z.string().optional(),
+            lastName: z.string().optional(),
+            email: z.string(),
+            phone: z.string().optional(),
+            company: z.string().optional(),
+            country: z.string().optional(),
+            city: z.string().optional(),
+            budgetMin: z.string().optional(),
+            budgetMax: z.string().optional(),
+            notes: z.string().optional(),
+            source: z.string().optional(),
+          }),
+          defaultSource: z.enum(['website', 'referral', 'social_media', 'advertisement', 'cold_call', 'event', 'other']).optional(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          // Decode CSV
+          const csvContent = Buffer.from(input.csvData, 'base64').toString('utf-8');
+          
+          // Parse CSV
+          const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
+          if (lines.length < 2) {
+            throw new Error('CSV muss mindestens eine Kopfzeile und eine Datenzeile enthalten');
+          }
+          
+          // Parse header
+          const headers = parseCSVLine(lines[0]);
+          
+          // Parse data rows
+          const results = {
+            success: 0,
+            failed: 0,
+            errors: [] as { row: number; error: string }[],
+          };
+          
+          for (let i = 1; i < lines.length; i++) {
+            try {
+              const values = parseCSVLine(lines[i]);
+              const rowData: Record<string, string> = {};
+              
+              headers.forEach((header, index) => {
+                rowData[header] = values[index] || '';
+              });
+              
+              // Map columns to lead fields
+              const leadData: any = {
+                source: input.defaultSource || 'other',
+                stage: 'new',
+                priority: 'warm',
+              };
+              
+              // Apply mapping
+              if (input.mapping.firstName && rowData[input.mapping.firstName]) {
+                leadData.firstName = rowData[input.mapping.firstName].trim();
+              }
+              if (input.mapping.lastName && rowData[input.mapping.lastName]) {
+                leadData.lastName = rowData[input.mapping.lastName].trim();
+              }
+              if (input.mapping.email && rowData[input.mapping.email]) {
+                leadData.email = rowData[input.mapping.email].trim().toLowerCase();
+              }
+              if (input.mapping.phone && rowData[input.mapping.phone]) {
+                leadData.phone = rowData[input.mapping.phone].trim();
+              }
+              if (input.mapping.company && rowData[input.mapping.company]) {
+                leadData.company = rowData[input.mapping.company].trim();
+              }
+              if (input.mapping.country && rowData[input.mapping.country]) {
+                leadData.country = rowData[input.mapping.country].trim();
+              }
+              if (input.mapping.city && rowData[input.mapping.city]) {
+                leadData.city = rowData[input.mapping.city].trim();
+              }
+              if (input.mapping.budgetMin && rowData[input.mapping.budgetMin]) {
+                leadData.budgetMin = rowData[input.mapping.budgetMin].replace(/[^0-9.]/g, '');
+              }
+              if (input.mapping.budgetMax && rowData[input.mapping.budgetMax]) {
+                leadData.budgetMax = rowData[input.mapping.budgetMax].replace(/[^0-9.]/g, '');
+              }
+              if (input.mapping.notes && rowData[input.mapping.notes]) {
+                leadData.notes = rowData[input.mapping.notes].trim();
+              }
+              if (input.mapping.source && rowData[input.mapping.source]) {
+                const sourceValue = rowData[input.mapping.source].trim().toLowerCase();
+                const validSources = ['website', 'referral', 'social_media', 'advertisement', 'cold_call', 'event', 'other'];
+                if (validSources.includes(sourceValue)) {
+                  leadData.source = sourceValue;
+                }
+              }
+              
+              // Validate required fields
+              if (!leadData.email) {
+                throw new Error('E-Mail ist erforderlich');
+              }
+              if (!leadData.firstName) {
+                // Try to extract from email
+                leadData.firstName = leadData.email.split('@')[0];
+              }
+              
+              // Validate email format
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(leadData.email)) {
+                throw new Error('Ungültige E-Mail-Adresse');
+              }
+              
+              // Create lead
+              await createLead(leadData);
+              results.success++;
+              
+            } catch (error: any) {
+              results.failed++;
+              results.errors.push({
+                row: i + 1,
+                error: error.message || 'Unbekannter Fehler',
+              });
+            }
+          }
+          
+          return results;
+        }),
+      
+      preview: protectedProcedure
+        .input(z.object({
+          csvData: z.string(), // Base64 encoded CSV
+        }))
+        .mutation(async ({ input }) => {
+          // Decode CSV
+          const csvContent = Buffer.from(input.csvData, 'base64').toString('utf-8');
+          
+          // Parse CSV
+          const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
+          if (lines.length < 1) {
+            throw new Error('CSV ist leer');
+          }
+          
+          // Parse header
+          const headers = parseCSVLine(lines[0]);
+          
+          // Parse first few rows for preview
+          const previewRows: Record<string, string>[] = [];
+          for (let i = 1; i < Math.min(lines.length, 6); i++) {
+            const values = parseCSVLine(lines[i]);
+            const rowData: Record<string, string> = {};
+            headers.forEach((header, index) => {
+              rowData[header] = values[index] || '';
+            });
+            previewRows.push(rowData);
+          }
+          
+          return {
+            headers,
+            previewRows,
+            totalRows: lines.length - 1,
+          };
         }),
     }),
   }),

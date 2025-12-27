@@ -186,3 +186,10 @@
 - [x] Backend-API: Dokumente auflisten und löschen
 - [x] Frontend: Dokument-Upload-Bereich im Lead-Detail
 - [x] Frontend: Dokumentenliste mit Download-Links
+
+## Lead-Import aus CSV
+- [x] Backend-API: CSV-Parsing und Validierung
+- [x] Backend-API: Bulk-Insert für Leads
+- [x] Frontend: CSV-Upload-Dialog im CRM
+- [x] Frontend: Spalten-Mapping-Interface
+- [x] Frontend: Import-Vorschau und Fehleranzeige
