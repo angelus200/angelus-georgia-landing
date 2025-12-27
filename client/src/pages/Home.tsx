@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { toast } from "sonner";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Home() {
   // The userAuth hooks provides authentication state
@@ -90,6 +91,7 @@ export default function Home() {
             </button>
 
             <div className="hidden md:flex items-center gap-3">
+              <LanguageSwitcher />
               {user ? (
                 <>
                   <a href="/dashboard">
@@ -158,6 +160,11 @@ export default function Home() {
               >
                 Kontakt
               </a>
+              
+              {/* Language Switcher */}
+              <div className="flex justify-center py-3 border-b border-border/50">
+                <LanguageSwitcher />
+              </div>
               
               {/* Mobile Auth Buttons */}
               <div className="flex flex-col gap-3 pt-4">

@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Datenschutz() {
   return (
@@ -15,9 +16,12 @@ export default function Datenschutz() {
               />
             </a>
           </Link>
-          <Link href="/">
-            <a className="text-sm text-gold hover:underline">← Zurück zur Startseite</a>
-          </Link>
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Link href="/">
+              <a className="text-sm text-gold hover:underline">← Zurück zur Startseite</a>
+            </Link>
+          </div>
         </div>
       </header>
 

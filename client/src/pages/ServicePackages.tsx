@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Building2, Shield, TrendingUp, Package } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const services = [
   {
@@ -130,6 +131,7 @@ export default function ServicePackages() {
             <Link href="/service-pakete" className="text-sm font-medium text-gold">
               Services
             </Link>
+            <LanguageSwitcher />
             <Link href="/login">
               <Button variant="outline" className="border-gold text-gold hover:bg-gold hover:text-white">
                 Anmelden

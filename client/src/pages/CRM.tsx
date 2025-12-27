@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Stage configuration
 const STAGES = [
@@ -190,6 +191,7 @@ export default function CRM() {
               <p className="text-sm text-gray-500">Kundenbeziehungsmanagement</p>
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input

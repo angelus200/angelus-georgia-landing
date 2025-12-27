@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Calendar } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -63,6 +64,7 @@ export default function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-4">
+            <LanguageSwitcher />
             <Button
               onClick={openCalendly}
               className="bg-[#C4A052] hover:bg-[#B39142] text-white"
@@ -113,6 +115,9 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
+              <div className="flex justify-center py-2">
+                <LanguageSwitcher />
+              </div>
               <hr className="my-2" />
               <Button
                 onClick={openCalendly}

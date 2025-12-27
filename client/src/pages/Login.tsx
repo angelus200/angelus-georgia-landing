@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { Loader2, UserCircle, Mail, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -98,7 +99,10 @@ export default function Login() {
   // Show success message after registration
   if (registrationSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gold/5 via-background to-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gold/5 via-background to-background p-4 relative">
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher />
+        </div>
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
@@ -155,7 +159,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gold/5 via-background to-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gold/5 via-background to-background p-4 relative">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">

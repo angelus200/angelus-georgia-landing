@@ -16,6 +16,7 @@ import {
   Package,
   Home,
 } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Generate or get session ID for anonymous carts
 function getSessionId(): string {
@@ -90,6 +91,7 @@ export default function Cart() {
               <span className="font-semibold text-gray-900">Angelus Management</span>
             </Link>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <ShoppingCart className="w-5 h-5 text-[#C4A052]" />
               <span className="font-medium">Warenkorb</span>
             </div>

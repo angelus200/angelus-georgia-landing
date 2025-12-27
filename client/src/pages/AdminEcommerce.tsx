@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   Building2,
   Package,
@@ -750,9 +751,12 @@ export default function AdminEcommerce() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">E-Commerce Verwaltung</h1>
-          <p className="text-gray-600 mt-2">Verwalten Sie Dienstleistungen, Bestellungen und Zahlungsmethoden</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">E-Commerce Verwaltung</h1>
+            <p className="text-gray-600 mt-2">Verwalten Sie Dienstleistungen, Bestellungen und Zahlungsmethoden</p>
+          </div>
+          <LanguageSwitcher />
         </div>
 
         <Tabs defaultValue="services" className="space-y-6">

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { User, Lock, MapPin, Phone, Mail, ArrowLeft, Save, CheckCircle } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Profile() {
   const [, setLocation] = useLocation();
@@ -123,7 +124,9 @@ export default function Profile() {
             <span>Zurück zum Dashboard</span>
           </button>
           <h1 className="text-xl font-semibold text-[#2c2c2c]">Mein Profil</h1>
-          <div className="w-32"></div>
+          <div className="w-32 flex justify-end">
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
       

@@ -35,6 +35,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { 
   Loader2, 
   Mail, 
@@ -307,7 +308,8 @@ export default function Admin() {
               </Link>
               <h1 className="text-xl font-bold text-foreground">Admin Dashboard</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               <span className="text-sm text-muted-foreground">{user.email}</span>
               <Link href="/">
                 <Button variant="outline" size="sm">

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Package, CreditCard, FileText, LogOut, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function InvestorDashboard() {
   const { user, logout } = useAuth();
@@ -40,6 +41,7 @@ export default function InvestorDashboard() {
               </a>
             </Link>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <Link href="/profil">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
                   <User className="h-4 w-4 text-gold" />

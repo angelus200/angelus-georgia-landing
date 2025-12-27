@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useParams, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Geheimer Token für Direktzugang - NUR FÜR AUTORISIERTE PERSONEN
 const SECRET_TOKEN = "2668814910efd2c52b1633d6ef0e6f569b5e3a7dd535884a8c674a936abe3d5a";
@@ -722,6 +723,7 @@ function AdminDirectDashboard() {
             <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <span className="text-sm text-gray-600">Direktzugang aktiv</span>
             <button 
               onClick={() => setLocation("/")}

@@ -19,6 +19,7 @@ import {
   Wallet,
   CreditCard,
 } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function MyOrders() {
   const [, setLocation] = useLocation();
@@ -72,6 +73,7 @@ export default function MyOrders() {
               <span className="font-semibold text-gray-900">Angelus Management</span>
             </Link>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <ShoppingBag className="w-5 h-5 text-[#C4A052]" />
               <span className="font-medium">Meine Bestellungen</span>
             </div>

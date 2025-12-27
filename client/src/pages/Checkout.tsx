@@ -21,6 +21,7 @@ import {
   Home,
   Wallet,
 } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function getSessionId(): string {
   return localStorage.getItem("cart_session_id") || "";
@@ -131,6 +132,7 @@ export default function Checkout() {
               <span className="font-semibold text-gray-900">Angelus Management</span>
             </Link>
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <CreditCard className="w-5 h-5 text-[#C4A052]" />
               <span className="font-medium">Checkout</span>
             </div>

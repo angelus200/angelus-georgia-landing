@@ -235,3 +235,9 @@
 - [x] Einheitliche Header-Navigation auf allen Unterseiten
 - [x] Calendly-Widget als Popup einbetten
 - [x] Verlinkungen zwischen allen Seiten sicherstellen
+
+## Mehrsprachigkeit (Google Translate)
+- [x] Google Translate Script in index.html einbinden
+- [x] Sprachwahl-Komponente im Header (DE/EN/RU)
+- [x] Widget auch im Admin-Bereich verfügbar machen
+- [x] Styling anpassen (zum Design passend)

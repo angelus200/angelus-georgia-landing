@@ -18,6 +18,7 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function OrderConfirmation() {
   const params = useParams<{ orderNumber: string }>();
@@ -122,6 +123,7 @@ export default function OrderConfirmation() {
               <Home className="w-5 h-5 text-[#C4A052]" />
               <span className="font-semibold text-gray-900">Angelus Management</span>
             </Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>

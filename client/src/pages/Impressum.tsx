@@ -1,12 +1,13 @@
 import { Building2, Mail, MapPin, Phone, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Impressum() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="bg-card border-b border-border py-6">
-        <div className="container">
+        <div className="container flex items-center justify-between">
           <a href="/" className="inline-block">
             <img
               src="/images/angelus-logo.png"
@@ -14,6 +15,7 @@ export default function Impressum() {
               className="h-12 w-auto object-contain"
             />
           </a>
+          <LanguageSwitcher />
         </div>
       </header>
 
