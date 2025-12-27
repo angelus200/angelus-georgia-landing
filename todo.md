@@ -241,3 +241,19 @@
 - [x] Sprachwahl-Komponente im Header (DE/EN/RU)
 - [x] Widget auch im Admin-Bereich verfügbar machen
 - [x] Styling anpassen (zum Design passend)
+
+## Cookie-Banner für DSGVO-Konformität
+- [x] Cookie-Consent-Banner Komponente erstellen
+- [x] Cookie-Einstellungen im localStorage speichern
+- [x] Google Translate nur laden wenn Cookies akzeptiert
+- [x] Banner-Design passend zum Website-Stil
+
+## Sprachpräferenz speichern
+- [x] Gewählte Sprache im localStorage speichern
+- [x] Sprache bei Seitenaufruf automatisch wiederherstellen
+- [x] LanguageSwitcher-Komponente entsprechend anpassen
+
+## SEO-Optimierung für Mehrsprachigkeit
+- [x] hreflang-Tags im HTML-Head hinzufügen
+- [x] Canonical-URLs für jede Sprachversion
+- [x] Meta-Tags für Sprache setzen

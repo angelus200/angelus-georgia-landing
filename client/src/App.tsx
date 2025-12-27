@@ -31,6 +31,8 @@ import Videos from "./pages/Videos";
 import InvestmentTest from "./pages/InvestmentTest";
 import Chatbot from "./components/Chatbot";
 import { CalendlyButton } from "./components/CalendlyPopup";
+import CookieConsent from "./components/CookieConsent";
+import SEOHead from "./components/SEOHead";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -97,10 +99,12 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <SessionHandler />
+          <SEOHead />
           <Toaster />
           <Router />
           <Chatbot />
           <CalendlyButton />
+          <CookieConsent />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
