@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { SocialShare } from "@/components/SocialShare";
 
 // Mock data for fallback
 const mockProperties: Record<number, any> = {
@@ -415,13 +416,22 @@ export default function PropertyDetail() {
                 )}
               </div>
 
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                {property.title}
-              </h1>
-              <p className="text-lg text-gray-600 flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-[#C4A052]" />
-                {property.location}, {property.city}
-              </p>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                    {property.title}
+                  </h1>
+                  <p className="text-lg text-gray-600 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-[#C4A052]" />
+                    {property.location}, {property.city}
+                  </p>
+                </div>
+                <SocialShare
+                  url={typeof window !== 'undefined' ? window.location.href : `https://georgien-property.agency/property/${property.id}`}
+                  title={property.title}
+                  description={`${property.location}, ${property.city} - €${parseInt(property.price).toLocaleString('de-DE')} - ${property.area}m²`}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4 py-6 border-y border-gray-200">

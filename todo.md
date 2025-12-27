@@ -193,3 +193,8 @@
 - [x] Frontend: CSV-Upload-Dialog im CRM
 - [x] Frontend: Spalten-Mapping-Interface
 - [x] Frontend: Import-Vorschau und Fehleranzeige
+
+## Social-Media-Sharing für Immobilien
+- [x] Sharing-Komponente mit WhatsApp, Facebook, Twitter, E-Mail erstellen
+- [x] In Immobilien-Detailseite einbinden
+- [x] Sharing-URL mit Immobilien-Titel und Beschreibung generieren
