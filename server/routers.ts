@@ -20,7 +20,25 @@ import {
   createInstallmentPayments,
   getPaymentsByBookingId,
   getPaymentsByUserId,
-  updatePaymentStatus
+  updatePaymentStatus,
+  // CRM functions
+  createLead,
+  getAllLeads,
+  getLeadsByStage,
+  getLeadById,
+  updateLead,
+  updateLeadStage,
+  deleteLead,
+  convertInquiryToLead,
+  createLeadActivity,
+  getLeadActivities,
+  getRecentActivities,
+  createCrmTask,
+  getLeadTasks,
+  getPendingTasks,
+  updateTaskStatus,
+  deleteCrmTask,
+  getCrmStats
 } from "./db";
 import {
   servicesRouter,
@@ -554,6 +572,192 @@ export const appRouter = router({
   payment: paymentRouter,
   propertyMedia: propertyMediaRouter,
   adminProperties: adminPropertiesRouter,
+
+  // CRM Router
+  crm: router({
+    // Lead Management
+    leads: router({
+      list: protectedProcedure.query(async () => {
+        return await getAllLeads();
+      }),
+      byStage: protectedProcedure
+        .input(z.object({ stage: z.string() }))
+        .query(async ({ input }) => {
+          return await getLeadsByStage(input.stage);
+        }),
+      get: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          return await getLeadById(input.id);
+        }),
+      create: protectedProcedure
+        .input(z.object({
+          source: z.enum(['website', 'referral', 'social_media', 'advertisement', 'cold_call', 'event', 'other']).optional(),
+          stage: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']).optional(),
+          priority: z.enum(['cold', 'warm', 'hot']).optional(),
+          firstName: z.string().min(1),
+          lastName: z.string().optional(),
+          email: z.string().email(),
+          phone: z.string().optional(),
+          company: z.string().optional(),
+          country: z.string().optional(),
+          city: z.string().optional(),
+          budgetMin: z.string().optional(),
+          budgetMax: z.string().optional(),
+          interestedPropertyTypes: z.string().optional(),
+          interestedCities: z.string().optional(),
+          timeline: z.enum(['immediate', '1_3_months', '3_6_months', '6_12_months', 'over_12_months']).optional(),
+          expectedValue: z.string().optional(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const leadId = await createLead(input as any);
+          return { success: true, leadId };
+        }),
+      update: protectedProcedure
+        .input(z.object({
+          id: z.number(),
+          data: z.object({
+            source: z.enum(['website', 'referral', 'social_media', 'advertisement', 'cold_call', 'event', 'other']).optional(),
+            stage: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']).optional(),
+            priority: z.enum(['cold', 'warm', 'hot']).optional(),
+            firstName: z.string().optional(),
+            lastName: z.string().optional(),
+            email: z.string().email().optional(),
+            phone: z.string().optional(),
+            company: z.string().optional(),
+            country: z.string().optional(),
+            city: z.string().optional(),
+            budgetMin: z.string().optional(),
+            budgetMax: z.string().optional(),
+            interestedPropertyTypes: z.string().optional(),
+            interestedCities: z.string().optional(),
+            timeline: z.enum(['immediate', '1_3_months', '3_6_months', '6_12_months', 'over_12_months']).optional(),
+            expectedValue: z.string().optional(),
+            probability: z.number().optional(),
+            nextFollowUpDate: z.string().optional(),
+            lostReason: z.string().optional(),
+            notes: z.string().optional(),
+          }),
+        }))
+        .mutation(async ({ input }) => {
+          const data = { ...input.data } as any;
+          if (data.nextFollowUpDate) {
+            data.nextFollowUpDate = new Date(data.nextFollowUpDate);
+          }
+          await updateLead(input.id, data);
+          return { success: true };
+        }),
+      updateStage: protectedProcedure
+        .input(z.object({
+          id: z.number(),
+          newStage: z.string(),
+          oldStage: z.string(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          await updateLeadStage(input.id, input.newStage, input.oldStage, ctx.user?.id);
+          return { success: true };
+        }),
+      delete: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await deleteLead(input.id);
+          return { success: true };
+        }),
+      convertFromInquiry: protectedProcedure
+        .input(z.object({ inquiryId: z.number() }))
+        .mutation(async ({ input }) => {
+          const leadId = await convertInquiryToLead(input.inquiryId);
+          return { success: true, leadId };
+        }),
+    }),
+
+    // Activity Management
+    activities: router({
+      list: protectedProcedure
+        .input(z.object({ leadId: z.number() }))
+        .query(async ({ input }) => {
+          return await getLeadActivities(input.leadId);
+        }),
+      recent: protectedProcedure
+        .input(z.object({ limit: z.number().optional() }))
+        .query(async ({ input }) => {
+          return await getRecentActivities(input.limit || 50);
+        }),
+      create: protectedProcedure
+        .input(z.object({
+          leadId: z.number(),
+          type: z.enum(['note', 'call', 'email', 'meeting', 'task', 'stage_change', 'property_view', 'document', 'other']),
+          title: z.string().min(1),
+          description: z.string().optional(),
+          callDuration: z.number().optional(),
+          callOutcome: z.enum(['answered', 'no_answer', 'voicemail', 'busy', 'wrong_number']).optional(),
+          emailSubject: z.string().optional(),
+          meetingLocation: z.string().optional(),
+          meetingTime: z.string().optional(),
+          propertyId: z.number().optional(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          const data = { ...input } as any;
+          if (data.meetingTime) {
+            data.meetingTime = new Date(data.meetingTime);
+          }
+          data.createdBy = ctx.user?.id;
+          const activityId = await createLeadActivity(data);
+          return { success: true, activityId };
+        }),
+    }),
+
+    // Task Management
+    tasks: router({
+      list: protectedProcedure
+        .input(z.object({ leadId: z.number() }))
+        .query(async ({ input }) => {
+          return await getLeadTasks(input.leadId);
+        }),
+      pending: protectedProcedure.query(async () => {
+        return await getPendingTasks();
+      }),
+      create: protectedProcedure
+        .input(z.object({
+          leadId: z.number().optional(),
+          type: z.enum(['follow_up', 'call', 'email', 'meeting', 'document', 'other']).optional(),
+          title: z.string().min(1),
+          description: z.string().optional(),
+          dueDate: z.string(),
+          priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          const taskId = await createCrmTask({
+            ...input,
+            dueDate: new Date(input.dueDate),
+            createdBy: ctx.user?.id,
+            assignedTo: ctx.user?.id,
+          } as any);
+          return { success: true, taskId };
+        }),
+      updateStatus: protectedProcedure
+        .input(z.object({
+          id: z.number(),
+          status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+        }))
+        .mutation(async ({ input }) => {
+          await updateTaskStatus(input.id, input.status);
+          return { success: true };
+        }),
+      delete: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await deleteCrmTask(input.id);
+          return { success: true };
+        }),
+    }),
+
+    // Statistics
+    stats: protectedProcedure.query(async () => {
+      return await getCrmStats();
+    }),
+  }),
 
   // Profile Router
   profile: router({

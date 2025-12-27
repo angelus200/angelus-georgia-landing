@@ -431,3 +431,158 @@ export const exchangeRates = mysqlTable("exchange_rates", {
 
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
 export type InsertExchangeRate = typeof exchangeRates.$inferInsert;
+
+/**
+ * ============================================
+ * CRM SYSTEM TABLES
+ * ============================================
+ */
+
+/**
+ * Leads table - Central CRM entity for tracking potential customers
+ */
+export const leads = mysqlTable("leads", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Link to user if they registered */
+  userId: int("userId"),
+  /** Link to contact inquiry if created from form */
+  contactInquiryId: int("contactInquiryId"),
+  /** Lead source */
+  source: mysqlEnum("source", ["website", "referral", "social_media", "advertisement", "cold_call", "event", "other"]).default("website").notNull(),
+  /** Pipeline stage */
+  stage: mysqlEnum("stage", ["new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"]).default("new").notNull(),
+  /** Lead priority/temperature */
+  priority: mysqlEnum("priority", ["cold", "warm", "hot"]).default("warm").notNull(),
+  /** Contact information */
+  firstName: varchar("firstName", { length: 100 }).notNull(),
+  lastName: varchar("lastName", { length: 100 }),
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  company: varchar("company", { length: 255 }),
+  /** Location */
+  country: varchar("country", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  /** Budget range */
+  budgetMin: decimal("budgetMin", { precision: 15, scale: 2 }),
+  budgetMax: decimal("budgetMax", { precision: 15, scale: 2 }),
+  /** Interested property types (JSON array) */
+  interestedPropertyTypes: text("interestedPropertyTypes"),
+  /** Interested cities (JSON array) */
+  interestedCities: text("interestedCities"),
+  /** Interested property IDs (JSON array) */
+  interestedPropertyIds: text("interestedPropertyIds"),
+  /** Investment timeline */
+  timeline: mysqlEnum("timeline", ["immediate", "1_3_months", "3_6_months", "6_12_months", "over_12_months"]),
+  /** Lead score (0-100) */
+  score: int("score").default(50),
+  /** Expected deal value */
+  expectedValue: decimal("expectedValue", { precision: 15, scale: 2 }),
+  /** Probability of closing (0-100) */
+  probability: int("probability").default(50),
+  /** Assigned to (admin user ID) */
+  assignedTo: int("assignedTo"),
+  /** Last contact date */
+  lastContactDate: timestamp("lastContactDate"),
+  /** Next follow-up date */
+  nextFollowUpDate: timestamp("nextFollowUpDate"),
+  /** Reason for lost (if stage is lost) */
+  lostReason: text("lostReason"),
+  /** Won date (if stage is won) */
+  wonDate: timestamp("wonDate"),
+  /** General notes */
+  notes: text("notes"),
+  /** Tags (JSON array) */
+  tags: text("tags"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;
+
+/**
+ * Lead activities - Log of all interactions with leads
+ */
+export const leadActivities = mysqlTable("lead_activities", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  /** Activity type */
+  type: mysqlEnum("type", ["note", "call", "email", "meeting", "task", "stage_change", "property_view", "document", "other"]).notNull(),
+  /** Activity title/subject */
+  title: varchar("title", { length: 255 }).notNull(),
+  /** Detailed description */
+  description: text("description"),
+  /** For calls: duration in minutes */
+  callDuration: int("callDuration"),
+  /** For calls: outcome */
+  callOutcome: mysqlEnum("callOutcome", ["answered", "no_answer", "voicemail", "busy", "wrong_number"]),
+  /** For emails: email subject */
+  emailSubject: varchar("emailSubject", { length: 255 }),
+  /** For meetings: location */
+  meetingLocation: varchar("meetingLocation", { length: 255 }),
+  /** For meetings: scheduled time */
+  meetingTime: timestamp("meetingTime"),
+  /** For tasks: due date */
+  taskDueDate: timestamp("taskDueDate"),
+  /** For tasks: completion status */
+  taskCompleted: boolean("taskCompleted").default(false),
+  /** For stage changes: old stage */
+  oldStage: varchar("oldStage", { length: 50 }),
+  /** For stage changes: new stage */
+  newStage: varchar("newStage", { length: 50 }),
+  /** Related property ID */
+  propertyId: int("propertyId"),
+  /** Attachment URL */
+  attachmentUrl: varchar("attachmentUrl", { length: 500 }),
+  /** Created by (admin user ID) */
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LeadActivity = typeof leadActivities.$inferSelect;
+export type InsertLeadActivity = typeof leadActivities.$inferInsert;
+
+/**
+ * CRM Tasks - Follow-up tasks and reminders
+ */
+export const crmTasks = mysqlTable("crm_tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId"),
+  /** Task type */
+  type: mysqlEnum("type", ["follow_up", "call", "email", "meeting", "document", "other"]).default("follow_up").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  dueDate: timestamp("dueDate").notNull(),
+  /** Reminder time before due date */
+  reminderMinutes: int("reminderMinutes").default(60),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
+  completedAt: timestamp("completedAt"),
+  /** Assigned to (admin user ID) */
+  assignedTo: int("assignedTo"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CrmTask = typeof crmTasks.$inferSelect;
+export type InsertCrmTask = typeof crmTasks.$inferInsert;
+
+/**
+ * Lead documents - Files associated with leads
+ */
+export const leadDocuments = mysqlTable("lead_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: mysqlEnum("type", ["contract", "id_document", "proof_of_funds", "correspondence", "proposal", "other"]).default("other").notNull(),
+  url: varchar("url", { length: 500 }).notNull(),
+  s3Key: varchar("s3Key", { length: 500 }),
+  fileSize: int("fileSize"),
+  mimeType: varchar("mimeType", { length: 100 }),
+  uploadedBy: int("uploadedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LeadDocument = typeof leadDocuments.$inferSelect;
+export type InsertLeadDocument = typeof leadDocuments.$inferInsert;

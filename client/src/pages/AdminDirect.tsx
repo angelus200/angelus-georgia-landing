@@ -649,6 +649,27 @@ function AdminDirectDashboard() {
     }
   };
 
+  // Kontakt zu Lead konvertieren
+  const handleConvertToLead = async (inquiryId: number) => {
+    try {
+      const res = await fetch("/api/trpc/crm.leads.convertFromInquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inquiryId }),
+      });
+
+      if (res.ok) {
+        alert("Kontakt wurde als Lead übernommen! Öffnen Sie das CRM um den Lead zu verwalten.");
+        await loadData();
+      } else {
+        alert("Fehler beim Konvertieren");
+      }
+    } catch (error) {
+      console.error("Fehler:", error);
+      alert("Fehler beim Konvertieren");
+    }
+  };
+
   // Kontakt-Status ändern
   const handleUpdateContactStatus = async (id: number, status: string) => {
     try {
@@ -766,6 +787,12 @@ function AdminDirectDashboard() {
           >
             Bestellungen
           </button>
+          <Link
+            href="/crm"
+            className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-[#C4A052] text-white hover:bg-[#B39142]"
+          >
+            📊 CRM
+          </Link>
         </div>
 
         {/* Content */}
@@ -824,9 +851,17 @@ function AdminDirectDashboard() {
                             </select>
                           </div>
                           <p className="mt-2 text-sm text-gray-700">{contact.message}</p>
-                          <p className="mt-2 text-xs text-gray-400">
-                            {new Date(contact.createdAt).toLocaleDateString("de-DE")}
-                          </p>
+                          <div className="mt-3 flex items-center justify-between">
+                            <p className="text-xs text-gray-400">
+                              {new Date(contact.createdAt).toLocaleDateString("de-DE")}
+                            </p>
+                            <button
+                              onClick={() => handleConvertToLead(contact.id)}
+                              className="px-3 py-1 text-xs font-medium text-[#C4A052] border border-[#C4A052] rounded-md hover:bg-[#C4A052] hover:text-white transition-colors"
+                            >
+                              → Als Lead übernehmen
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

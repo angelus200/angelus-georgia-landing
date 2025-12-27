@@ -169,3 +169,13 @@
 - [x] Ratenzahlungsoptionen hinzufügen (Min. Anzahlung, Max. Laufzeit, Zinssatz)
 - [x] Mehrere Bilder-Upload ermöglichen (Galerie)
 - [x] Video-URLs Feld hinzufügen
+
+## CRM-System Erweiterung
+- [x] Datenbank-Schema: Leads-Tabelle mit Pipeline-Phasen
+- [x] Datenbank-Schema: Aktivitäten-Tabelle (Notizen, Anrufe, E-Mails)
+- [x] Backend-API für Lead-Management (CRUD, Status-Änderung)
+- [x] Backend-API für Aktivitäten (erstellen, auflisten)
+- [x] CRM-Dashboard mit Übersicht und KPIs
+- [x] Lead-Pipeline mit Drag & Drop (Kanban-Board)
+- [x] Kundendetailseite mit vollständiger Historie
+- [x] Aktivitäten-Log pro Kunde/Lead

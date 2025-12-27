@@ -12,7 +12,18 @@ import {
   bookings,
   InsertBooking,
   installmentPayments,
-  InsertInstallmentPayment
+  InsertInstallmentPayment,
+  leads,
+  InsertLead,
+  Lead,
+  leadActivities,
+  InsertLeadActivity,
+  LeadActivity,
+  crmTasks,
+  InsertCrmTask,
+  CrmTask,
+  leadDocuments,
+  InsertLeadDocument
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1157,4 +1168,451 @@ export function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `AMG-${timestamp}-${random}`;
+}
+
+
+/**
+ * ============================================
+ * CRM FUNCTIONS
+ * ============================================
+ */
+
+// ==================== LEADS ====================
+
+/**
+ * Create a new lead
+ */
+export async function createLead(lead: InsertLead): Promise<number | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create lead: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(leads).values(lead);
+    return (result as any)[0]?.insertId || null;
+  } catch (error) {
+    console.error("[Database] Failed to create lead:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all leads
+ */
+export async function getAllLeads(): Promise<Lead[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get leads: database not available");
+    return [];
+  }
+
+  try {
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get leads:", error);
+    return [];
+  }
+}
+
+/**
+ * Get leads by stage
+ */
+export async function getLeadsByStage(stage: string): Promise<Lead[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get leads by stage: database not available");
+    return [];
+  }
+
+  try {
+    return await db.select().from(leads).where(eq(leads.stage, stage as any)).orderBy(desc(leads.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get leads by stage:", error);
+    return [];
+  }
+}
+
+/**
+ * Get lead by ID
+ */
+export async function getLeadById(id: number): Promise<Lead | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get lead: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.select().from(leads).where(eq(leads.id, id));
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get lead:", error);
+    return null;
+  }
+}
+
+/**
+ * Update lead
+ */
+export async function updateLead(id: number, data: Partial<InsertLead>): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update lead: database not available");
+    return;
+  }
+
+  try {
+    await db.update(leads).set(data).where(eq(leads.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update lead:", error);
+    throw error;
+  }
+}
+
+/**
+ * Update lead stage (with activity logging)
+ */
+export async function updateLeadStage(id: number, newStage: string, oldStage: string, userId?: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update lead stage: database not available");
+    return;
+  }
+
+  try {
+    // Update the lead stage
+    await db.update(leads).set({ 
+      stage: newStage as any,
+      ...(newStage === 'won' ? { wonDate: new Date() } : {})
+    }).where(eq(leads.id, id));
+
+    // Log the stage change as an activity
+    await db.insert(leadActivities).values({
+      leadId: id,
+      type: 'stage_change',
+      title: `Phase geändert: ${getStageLabel(oldStage)} → ${getStageLabel(newStage)}`,
+      oldStage,
+      newStage,
+      createdBy: userId,
+    });
+  } catch (error) {
+    console.error("[Database] Failed to update lead stage:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete lead
+ */
+export async function deleteLead(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete lead: database not available");
+    return;
+  }
+
+  try {
+    // Delete related activities first
+    await db.delete(leadActivities).where(eq(leadActivities.leadId, id));
+    // Delete related tasks
+    await db.delete(crmTasks).where(eq(crmTasks.leadId, id));
+    // Delete related documents
+    await db.delete(leadDocuments).where(eq(leadDocuments.leadId, id));
+    // Delete the lead
+    await db.delete(leads).where(eq(leads.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to delete lead:", error);
+    throw error;
+  }
+}
+
+/**
+ * Convert contact inquiry to lead
+ */
+export async function convertInquiryToLead(inquiryId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot convert inquiry: database not available");
+    return null;
+  }
+
+  try {
+    // Get the inquiry
+    const inquiry = await db.select().from(contactInquiries).where(eq(contactInquiries.id, inquiryId));
+    if (!inquiry[0]) return null;
+
+    const inq = inquiry[0];
+    
+    // Create lead from inquiry
+    const result = await db.insert(leads).values({
+      contactInquiryId: inquiryId,
+      source: 'website',
+      stage: 'new',
+      firstName: inq.name.split(' ')[0] || inq.name,
+      lastName: inq.name.split(' ').slice(1).join(' ') || undefined,
+      email: inq.email,
+      phone: inq.phone || undefined,
+      notes: inq.message,
+    });
+
+    // Update inquiry status
+    await db.update(contactInquiries).set({ status: 'contacted' }).where(eq(contactInquiries.id, inquiryId));
+
+    return (result as any)[0]?.insertId || null;
+  } catch (error) {
+    console.error("[Database] Failed to convert inquiry to lead:", error);
+    throw error;
+  }
+}
+
+// ==================== LEAD ACTIVITIES ====================
+
+/**
+ * Create lead activity
+ */
+export async function createLeadActivity(activity: InsertLeadActivity): Promise<number | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create activity: database not available");
+    return null;
+  }
+
+  try {
+    // Update lead's last contact date
+    await db.update(leads).set({ lastContactDate: new Date() }).where(eq(leads.id, activity.leadId));
+    
+    const result = await db.insert(leadActivities).values(activity);
+    return (result as any)[0]?.insertId || null;
+  } catch (error) {
+    console.error("[Database] Failed to create activity:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get activities for a lead
+ */
+export async function getLeadActivities(leadId: number): Promise<LeadActivity[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get activities: database not available");
+    return [];
+  }
+
+  try {
+    return await db.select().from(leadActivities).where(eq(leadActivities.leadId, leadId)).orderBy(desc(leadActivities.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get activities:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all recent activities
+ */
+export async function getRecentActivities(limit: number = 50): Promise<LeadActivity[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get recent activities: database not available");
+    return [];
+  }
+
+  try {
+    return await db.select().from(leadActivities).orderBy(desc(leadActivities.createdAt)).limit(limit);
+  } catch (error) {
+    console.error("[Database] Failed to get recent activities:", error);
+    return [];
+  }
+}
+
+// ==================== CRM TASKS ====================
+
+/**
+ * Create CRM task
+ */
+export async function createCrmTask(task: InsertCrmTask): Promise<number | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create task: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(crmTasks).values(task);
+    return (result as any)[0]?.insertId || null;
+  } catch (error) {
+    console.error("[Database] Failed to create task:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get tasks for a lead
+ */
+export async function getLeadTasks(leadId: number): Promise<CrmTask[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get tasks: database not available");
+    return [];
+  }
+
+  try {
+    return await db.select().from(crmTasks).where(eq(crmTasks.leadId, leadId)).orderBy(desc(crmTasks.dueDate));
+  } catch (error) {
+    console.error("[Database] Failed to get tasks:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all pending tasks
+ */
+export async function getPendingTasks(): Promise<CrmTask[]> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get pending tasks: database not available");
+    return [];
+  }
+
+  try {
+    return await db.select().from(crmTasks).where(eq(crmTasks.status, 'pending')).orderBy(crmTasks.dueDate);
+  } catch (error) {
+    console.error("[Database] Failed to get pending tasks:", error);
+    return [];
+  }
+}
+
+/**
+ * Update task status
+ */
+export async function updateTaskStatus(id: number, status: string): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update task: database not available");
+    return;
+  }
+
+  try {
+    await db.update(crmTasks).set({ 
+      status: status as any,
+      ...(status === 'completed' ? { completedAt: new Date() } : {})
+    }).where(eq(crmTasks.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update task:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete task
+ */
+export async function deleteCrmTask(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete task: database not available");
+    return;
+  }
+
+  try {
+    await db.delete(crmTasks).where(eq(crmTasks.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to delete task:", error);
+    throw error;
+  }
+}
+
+// ==================== CRM STATISTICS ====================
+
+/**
+ * Get CRM dashboard statistics
+ */
+export async function getCrmStats(): Promise<{
+  totalLeads: number;
+  leadsByStage: Record<string, number>;
+  leadsByPriority: Record<string, number>;
+  pipelineValue: number;
+  conversionRate: number;
+  pendingTasks: number;
+  recentActivities: number;
+}> {
+  const db = await getDb();
+  if (!db) {
+    return {
+      totalLeads: 0,
+      leadsByStage: {},
+      leadsByPriority: {},
+      pipelineValue: 0,
+      conversionRate: 0,
+      pendingTasks: 0,
+      recentActivities: 0,
+    };
+  }
+
+  try {
+    const allLeads = await db.select().from(leads);
+    const pendingTasksResult = await db.select().from(crmTasks).where(eq(crmTasks.status, 'pending'));
+    
+    // Calculate stats
+    const leadsByStage: Record<string, number> = {};
+    const leadsByPriority: Record<string, number> = {};
+    let pipelineValue = 0;
+    let wonCount = 0;
+    let closedCount = 0;
+
+    for (const lead of allLeads) {
+      // By stage
+      leadsByStage[lead.stage] = (leadsByStage[lead.stage] || 0) + 1;
+      
+      // By priority
+      leadsByPriority[lead.priority] = (leadsByPriority[lead.priority] || 0) + 1;
+      
+      // Pipeline value (only active leads)
+      if (!['won', 'lost'].includes(lead.stage) && lead.expectedValue) {
+        pipelineValue += parseFloat(lead.expectedValue.toString());
+      }
+      
+      // Conversion rate
+      if (lead.stage === 'won') wonCount++;
+      if (['won', 'lost'].includes(lead.stage)) closedCount++;
+    }
+
+    const conversionRate = closedCount > 0 ? (wonCount / closedCount) * 100 : 0;
+
+    return {
+      totalLeads: allLeads.length,
+      leadsByStage,
+      leadsByPriority,
+      pipelineValue,
+      conversionRate,
+      pendingTasks: pendingTasksResult.length,
+      recentActivities: 0, // Will be calculated separately if needed
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get CRM stats:", error);
+    return {
+      totalLeads: 0,
+      leadsByStage: {},
+      leadsByPriority: {},
+      pipelineValue: 0,
+      conversionRate: 0,
+      pendingTasks: 0,
+      recentActivities: 0,
+    };
+  }
+}
+
+// Helper function for stage labels
+function getStageLabel(stage: string): string {
+  const labels: Record<string, string> = {
+    new: 'Neu',
+    contacted: 'Kontaktiert',
+    qualified: 'Qualifiziert',
+    proposal: 'Angebot',
+    negotiation: 'Verhandlung',
+    won: 'Gewonnen',
+    lost: 'Verloren',
+  };
+  return labels[stage] || stage;
 }
