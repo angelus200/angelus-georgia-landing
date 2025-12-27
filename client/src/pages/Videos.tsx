@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Play, X, Filter } from "lucide-react";
+import Header from "@/components/Header";
 
 const categories = [
   { value: "all", label: "Alle Videos" },
@@ -54,8 +55,9 @@ export default function Videos() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
+      <Header />
       {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] text-white">
+      <section className="relative pt-28 pb-20 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">

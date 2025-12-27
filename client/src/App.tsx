@@ -30,6 +30,7 @@ import CRM from "./pages/CRM";
 import Videos from "./pages/Videos";
 import InvestmentTest from "./pages/InvestmentTest";
 import Chatbot from "./components/Chatbot";
+import { CalendlyButton } from "./components/CalendlyPopup";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -99,6 +100,7 @@ function App() {
           <Toaster />
           <Router />
           <Chatbot />
+          <CalendlyButton />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

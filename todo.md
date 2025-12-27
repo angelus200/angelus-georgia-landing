@@ -229,3 +229,9 @@
 - [x] Calendly-Link im Investment-Test Ergebnis
 - [x] Calendly-Link im Chatbot System-Prompt
 - [x] Calendly-Link auf Immobilien-Detailseiten
+
+## Navigation & Calendly-Widget
+- [x] Alle Seiten auf fehlende Navigation prüfen
+- [x] Einheitliche Header-Navigation auf allen Unterseiten
+- [x] Calendly-Widget als Popup einbetten
+- [x] Verlinkungen zwischen allen Seiten sicherstellen

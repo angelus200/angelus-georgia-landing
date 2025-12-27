@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useRoute, Link, useLocation } from "wouter";
+import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -309,35 +310,10 @@ export default function PropertyDetail() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/">
-              <img
-                src="/images/angelus-logo.png"
-                alt="Angelus Management Georgia"
-                className="h-12 w-auto object-contain"
-              />
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/immobilien" className="flex items-center gap-2 text-sm text-[#C4A052] hover:underline">
-                <ArrowLeft className="h-4 w-4" />
-                Zurück zur Übersicht
-              </Link>
-              <Link href="/warenkorb">
-                <Button variant="outline" size="sm">
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Warenkorb
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Image Gallery */}
-      <section className="max-w-7xl mx-auto px-4 py-8">
+      <section className="max-w-7xl mx-auto px-4 pt-24 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="relative h-96 md:h-[500px] rounded-xl overflow-hidden bg-gray-100">
             {allMedia.length > 0 ? (

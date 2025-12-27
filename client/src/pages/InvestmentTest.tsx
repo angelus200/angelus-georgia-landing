@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Header from "@/components/Header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -246,31 +247,24 @@ export default function InvestmentTest() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FAF8F5] to-[#F5F0E8]">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
-            <img 
-              src="/images/angelus-logo.png" 
-              alt="Angelus Management" 
-              className="h-10 w-auto"
-            />
-          </a>
-          {currentStep > 0 && currentStep <= questions.length && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Frage {currentStep} von {questions.length}</span>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#C4A052] transition-all duration-300"
-                  style={{ width: `${(currentStep / questions.length) * 100}%` }}
-                />
-              </div>
+      <Header />
+      
+      {/* Progress Bar */}
+      {currentStep > 0 && currentStep <= questions.length && (
+        <div className="fixed top-16 lg:top-20 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 z-40">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-center gap-4">
+            <span className="text-sm text-gray-500">Frage {currentStep} von {questions.length}</span>
+            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-[#C4A052] transition-all duration-300"
+                style={{ width: `${(currentStep / questions.length) * 100}%` }}
+              />
             </div>
-          )}
+          </div>
         </div>
-      </header>
+      )}
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 pt-28 pb-12">
         {/* Intro Screen */}
         {currentStep === 0 && (
           <div className="max-w-2xl mx-auto text-center">

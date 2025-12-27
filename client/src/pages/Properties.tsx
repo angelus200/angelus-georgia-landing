@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
+import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -131,30 +132,14 @@ export default function Properties() {
   });
 
   // Get unique cities for filter
-  const cities = Array.from(new Set(properties.map(p => p.city)));
+  const cities = Array.from(new Set(properties.map((p: any) => p.city))) as string[];
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/">
-              <img
-                src="/images/angelus-logo.png"
-                alt="Angelus Management Georgia"
-                className="h-12 w-auto object-contain"
-              />
-            </Link>
-            <Link href="/" className="text-sm text-[#C4A052] hover:underline">
-              ← Zurück zur Startseite
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-[#C4A052]/10 via-[#FAF8F5] to-[#FAF8F5] py-16">
+      <section className="bg-gradient-to-br from-[#C4A052]/10 via-[#FAF8F5] to-[#FAF8F5] pt-28 pb-16">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Immobilien in Georgien
@@ -176,7 +161,7 @@ export default function Properties() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Städte</SelectItem>
-                {cities.map(city => (
+                {cities.map((city: string) => (
                   <SelectItem key={city} value={city}>{city}</SelectItem>
                 ))}
               </SelectContent>
