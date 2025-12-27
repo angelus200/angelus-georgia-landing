@@ -156,3 +156,7 @@
 - [x] Problem: Resend Free-Plan Kontingent war aufgebraucht (0 E-Mails übrig)
 - [x] Lösung: Upgrade auf Transactional Pro Plan (50.000 E-Mails/Monat, $20/Monat)
 - [x] E-Mail-Versand funktioniert jetzt korrekt
+
+## E-Mail-Absender Verbesserungen
+- [x] Absender-Name auf "Angelus Management Georgia" setzen
+- [x] Reply-To Adresse auf angelusmanagementgeorgia@gmail.com setzen

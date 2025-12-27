@@ -2,12 +2,14 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.API_KEY_RESEND);
 
-const FROM_EMAIL = 'Angelus Management Georgia <onboarding@resend.dev>'; // Change to your verified domain
+const FROM_EMAIL = 'Angelus Management Georgia <onboarding@resend.dev>';
+const REPLY_TO_EMAIL = 'angelusmanagementgeorgia@gmail.com';
 
 export async function sendWelcomeEmail(to: string, name: string) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: 'Willkommen bei Angelus Management Georgia',
       html: `
@@ -38,6 +40,7 @@ export async function sendEmailVerification(to: string, token: string) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: 'Bestätigen Sie Ihre E-Mail-Adresse',
       html: `
@@ -71,6 +74,7 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: 'Passwort zurücksetzen',
       html: `
@@ -112,6 +116,7 @@ export async function sendBookingConfirmation(
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: 'Buchungsbestätigung - Angelus Management Georgia',
       html: `
@@ -175,6 +180,7 @@ export async function sendOrderConfirmation(
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: `Bestellbestätigung #${orderDetails.orderNumber} - Angelus Management Georgia`,
       html: `
@@ -252,6 +258,7 @@ export async function sendPaymentReceivedEmail(
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to,
       subject: `Zahlungseingang bestätigt #${paymentDetails.orderNumber} - Angelus Management Georgia`,
       html: `
@@ -342,6 +349,7 @@ export async function sendAdminOrderNotification(
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       to: adminEmail,
       subject: `🔔 Neue Bestellung #${orderDetails.orderNumber} - €${orderDetails.totalAmount.toLocaleString()}`,
       html: `
