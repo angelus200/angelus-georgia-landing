@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, email, first_name, email_verified, created_at FROM users WHERE email LIKE '%angelus%' OR email LIKE '%gross%'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT id, email, first_name, email_verified, created_at FROM users WHERE email LIKE '%angelus%' OR email LIKE '%gross%'",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'first_name' in 'field list'"
+  ]
+}

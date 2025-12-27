@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, email FROM users WHERE email LIKE '%angelus%' OR email LIKE '%gross%'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT id, email FROM users WHERE email LIKE '%angelus%' OR email LIKE '%gross%'",
+  "rows": [
+    {
+      "id": "27",
+      "email": "admin@angelusgeorgia.com"
+    },
+    {
+      "id": "1",
+      "email": "grossdigitalpartner@gmail.com"
+    },
+    {
+      "id": "266",
+      "email": "t.gross@angelus.group"
+    },
+    {
+      "id": "311",
+      "email": "test-email-debug@angelus.group"
+    },
+    {
+      "id": "40",
+      "email": "thomasgross65@gmail.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\n27\tadmin@angelusgeorgia.com\n1\tgrossdigitalpartner@gmail.com\n266\tt.gross@angelus.group\n311\ttest-email-debug@angelus.group\n40\tthomasgross65@gmail.com\n",
+  "stderr": "",
+  "execution_time_ms": 1488
+}

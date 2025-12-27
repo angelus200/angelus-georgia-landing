@@ -150,3 +150,9 @@
 - [x] Bestellbestätigungs-E-Mails implementieren
 - [x] Zahlungseingangs-E-Mails implementieren
 - [x] Admin-Benachrichtigung bei neuen Bestellungen
+
+## E-Mail-Versand Problem (GELÖST)
+- [x] Bestätigungs-E-Mail ging nicht raus bei Registrierung
+- [x] Problem: Resend Free-Plan Kontingent war aufgebraucht (0 E-Mails übrig)
+- [x] Lösung: Upgrade auf Transactional Pro Plan (50.000 E-Mails/Monat, $20/Monat)
+- [x] E-Mail-Versand funktioniert jetzt korrekt
