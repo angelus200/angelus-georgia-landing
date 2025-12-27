@@ -222,3 +222,10 @@
 - [x] Quick-Reply Buttons für häufige Fragen
 - [x] Lead-Erfassung bei Interesse
 - [x] In alle Seiten einbinden
+
+## Calendly-Integration
+- [x] Calendly-Link auf Startseite (Beratung anfragen)
+- [x] Calendly-Link im Kontaktbereich
+- [x] Calendly-Link im Investment-Test Ergebnis
+- [x] Calendly-Link im Chatbot System-Prompt
+- [x] Calendly-Link auf Immobilien-Detailseiten

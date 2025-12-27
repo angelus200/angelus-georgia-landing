@@ -541,7 +541,7 @@ export default function InvestmentTest() {
                 </Card>
               </a>
 
-              <a href="/#contact">
+              <a href="https://calendly.com/t-gross-lce/besprechung" target="_blank" rel="noopener noreferrer">
                 <Card className="p-6 bg-[#C4A052] hover:bg-[#B39142] transition-colors cursor-pointer group">
                   <div className="flex items-center justify-between">
                     <div>

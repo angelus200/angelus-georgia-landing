@@ -686,11 +686,11 @@ export default function PropertyDetail() {
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
             Unsere Experten beraten Sie gerne persönlich und beantworten alle Ihre Fragen.
           </p>
-          <Link href="/#contact">
+          <a href="https://calendly.com/t-gross-lce/besprechung" target="_blank" rel="noopener noreferrer">
             <Button size="lg" className="bg-[#C4A052] hover:bg-[#B39142]">
-              Jetzt Kontakt aufnehmen
+              📅 Beratungstermin buchen
             </Button>
-          </Link>
+          </a>
         </div>
       </section>
     </div>

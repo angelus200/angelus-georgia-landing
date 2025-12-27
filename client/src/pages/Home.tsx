@@ -224,7 +224,7 @@ export default function Home() {
               <div className="flex flex-wrap gap-4">
                 <Button
                   size="lg"
-                  onClick={scrollToContact}
+                  onClick={() => window.open('https://calendly.com/t-gross-lce/besprechung', '_blank')}
                   className="bg-gold text-white hover:bg-gold/90 transition-all duration-300 text-lg px-8 py-6"
                 >
                   Jetzt Beratung anfragen
@@ -678,6 +678,13 @@ export default function Home() {
             <p className="text-xl text-muted-foreground">
               Kontaktieren Sie uns für eine unverbindliche Erstberatung.
             </p>
+            <Button
+              size="lg"
+              onClick={() => window.open('https://calendly.com/t-gross-lce/besprechung', '_blank')}
+              className="bg-gold text-white hover:bg-gold/90 mt-4"
+            >
+              📅 Direkt Termin buchen
+            </Button>
           </div>
 
           <Card className="p-8 lg:p-12 bg-white border-gold/20">
