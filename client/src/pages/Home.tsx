@@ -247,6 +247,17 @@ export default function Home() {
                 </Button>
               </div>
               
+              {/* Investment Test CTA */}
+              <div className="mt-6 p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-gold/20 inline-flex items-center gap-4">
+                <div className="w-10 h-10 bg-gold/10 rounded-full flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-gold" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Passt Georgien zu Ihnen?</p>
+                  <a href="/investment-test" className="text-gold hover:underline text-sm font-semibold">Jetzt kostenlosen Investment-Test machen →</a>
+                </div>
+              </div>
+              
               {/* Social Media Channels */}
               <div className="flex items-center gap-4 pt-4 flex-wrap">
                 <span className="text-sm text-muted-foreground">Folgen Sie uns:</span>

@@ -206,3 +206,11 @@
 - [x] Frontend: /videos Seite mit Kategorien und Lightbox
 - [x] Frontend: Video-Sektion auf Startseite
 - [x] Navigation: Link zu Videos/Mediathek hinzufügen
+
+## Investoren-Selbsttest (Lead-Generierung)
+- [x] Logik und Fragenkonzept entwickeln
+- [x] Frontend: Interaktiver Multi-Step-Test
+- [x] Ergebnis-Seite mit Investoren-Profil und Empfehlungen
+- [x] Lead-Erfassung (E-Mail) vor Ergebnisanzeige
+- [x] CRM-Integration: Leads automatisch anlegen
+- [x] Call-to-Action mit passenden Immobilien

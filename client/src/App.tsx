@@ -28,6 +28,7 @@ import MyOrders from "./pages/MyOrders";
 import Profile from "./pages/Profile";
 import CRM from "./pages/CRM";
 import Videos from "./pages/Videos";
+import InvestmentTest from "./pages/InvestmentTest";
 
 // Session token handler - reads session from URL and sets cookie
 function SessionHandler() {
@@ -81,6 +82,7 @@ function Router() {
       <Route path={"/profil"} component={Profile} />
       <Route path={"/crm"} component={CRM} />
       <Route path={"/videos"} component={Videos} />
+      <Route path={"/investment-test"} component={InvestmentTest} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
