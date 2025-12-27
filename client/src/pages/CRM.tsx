@@ -23,7 +23,14 @@ import {
   Flame,
   Thermometer,
   Snowflake,
-  X
+  X,
+  Upload,
+  Trash2,
+  Download,
+  File,
+  FileCheck,
+  FileBadge,
+  FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -761,6 +768,29 @@ function LeadDetailModal({ lead, onClose, onDelete, onUpdate }: {
   
   const { data: activities, refetch: refetchActivities } = trpc.crm.activities.list.useQuery({ leadId: lead.id });
   const { data: tasks, refetch: refetchTasks } = trpc.crm.tasks.list.useQuery({ leadId: lead.id });
+  const { data: documents, refetch: refetchDocuments } = trpc.crm.documents.list.useQuery({ leadId: lead.id });
+  
+  const uploadDocumentMutation = trpc.crm.documents.upload.useMutation({
+    onSuccess: () => {
+      toast.success("Dokument hochgeladen");
+      refetchDocuments();
+      refetchActivities();
+    },
+    onError: (error) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+  
+  const deleteDocumentMutation = trpc.crm.documents.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Dokument gelöscht");
+      refetchDocuments();
+      refetchActivities();
+    },
+    onError: (error) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
   
   const createActivityMutation = trpc.crm.activities.create.useMutation({
     onSuccess: () => {
@@ -811,7 +841,7 @@ function LeadDetailModal({ lead, onClose, onDelete, onUpdate }: {
         {/* Tabs */}
         <div className="border-b px-6">
           <div className="flex gap-4">
-            {['info', 'activities', 'tasks'].map((tab) => (
+            {['info', 'activities', 'tasks', 'documents'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -824,6 +854,7 @@ function LeadDetailModal({ lead, onClose, onDelete, onUpdate }: {
                 {tab === 'info' && 'Informationen'}
                 {tab === 'activities' && `Aktivitäten (${activities?.length || 0})`}
                 {tab === 'tasks' && `Aufgaben (${tasks?.length || 0})`}
+                {tab === 'documents' && 'Dokumente'}
               </button>
             ))}
           </div>
@@ -962,8 +993,250 @@ function LeadDetailModal({ lead, onClose, onDelete, onUpdate }: {
               )}
             </div>
           )}
+
+          {activeTab === 'documents' && (
+            <DocumentsTab
+              leadId={lead.id}
+              documents={documents || []}
+              onUpload={(data) => uploadDocumentMutation.mutate(data)}
+              onDelete={(id) => deleteDocumentMutation.mutate({ id })}
+              isUploading={uploadDocumentMutation.isPending}
+              isDeleting={deleteDocumentMutation.isPending}
+            />
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// Document Type Labels
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  contract: 'Vertrag',
+  id_document: 'Ausweis',
+  proof_of_funds: 'Kapitalnachweis',
+  correspondence: 'Korrespondenz',
+  proposal: 'Angebot',
+  other: 'Sonstiges',
+};
+
+const DOCUMENT_TYPE_ICONS: Record<string, any> = {
+  contract: FileCheck,
+  id_document: FileBadge,
+  proof_of_funds: FileSpreadsheet,
+  correspondence: Mail,
+  proposal: FileText,
+  other: File,
+};
+
+// Documents Tab Component
+function DocumentsTab({ 
+  leadId, 
+  documents, 
+  onUpload, 
+  onDelete, 
+  isUploading, 
+  isDeleting 
+}: {
+  leadId: number;
+  documents: any[];
+  onUpload: (data: any) => void;
+  onDelete: (id: number) => void;
+  isUploading: boolean;
+  isDeleting: boolean;
+}) {
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadData, setUploadData] = useState({
+    name: '',
+    type: 'other' as string,
+    file: null as File | null,
+  });
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadData(prev => ({
+        ...prev,
+        file,
+        name: prev.name || file.name.replace(/\.[^/.]+$/, ''), // Use filename without extension as default name
+      }));
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadData.file || !uploadData.name) {
+      toast.error('Bitte wählen Sie eine Datei und geben Sie einen Namen ein');
+      return;
+    }
+
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      onUpload({
+        leadId,
+        name: uploadData.name,
+        type: uploadData.type,
+        fileData: base64,
+        fileName: uploadData.file!.name,
+        mimeType: uploadData.file!.type,
+        fileSize: uploadData.file!.size,
+      });
+      setShowUploadForm(false);
+      setUploadData({ name: '', type: 'other', file: null });
+    };
+    reader.readAsDataURL(uploadData.file);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('Möchten Sie dieses Dokument wirklich löschen?')) {
+      setDeletingId(id);
+      onDelete(id);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  return (
+    <div>
+      {/* Upload Button */}
+      <div className="mb-6">
+        {!showUploadForm ? (
+          <Button onClick={() => setShowUploadForm(true)} className="bg-gold hover:bg-gold/90">
+            <Upload className="h-4 w-4 mr-2" />
+            Dokument hochladen
+          </Button>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-4 border">
+            <h4 className="font-medium mb-4">Neues Dokument hochladen</h4>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Datei auswählen *</label>
+                <input
+                  type="file"
+                  onChange={handleFileSelect}
+                  className="w-full border rounded-md p-2 text-sm"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+                />
+                {uploadData.file && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    {uploadData.file.name} ({formatFileSize(uploadData.file.size)})
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Dokumentname *</label>
+                  <Input
+                    value={uploadData.name}
+                    onChange={(e) => setUploadData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="z.B. Kaufvertrag Apartment 12"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Dokumenttyp</label>
+                  <select
+                    value={uploadData.type}
+                    onChange={(e) => setUploadData(prev => ({ ...prev, type: e.target.value }))}
+                    className="w-full border rounded-md p-2"
+                  >
+                    {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowUploadForm(false);
+                    setUploadData({ name: '', type: 'other', file: null });
+                  }}
+                >
+                  Abbrechen
+                </Button>
+                <Button 
+                  onClick={handleUpload} 
+                  disabled={isUploading || !uploadData.file || !uploadData.name}
+                  className="bg-gold hover:bg-gold/90"
+                >
+                  {isUploading ? 'Wird hochgeladen...' : 'Hochladen'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Documents List */}
+      {documents.length > 0 ? (
+        <div className="space-y-3">
+          {documents.map((doc) => {
+            const TypeIcon = DOCUMENT_TYPE_ICONS[doc.type] || File;
+            return (
+              <div 
+                key={doc.id} 
+                className="flex items-center justify-between p-4 bg-white rounded-lg border hover:border-gray-300 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <TypeIcon className="h-5 w-5 text-gray-500" />
+                  </div>
+                  <div>
+                    <div className="font-medium">{doc.name}</div>
+                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {DOCUMENT_TYPE_LABELS[doc.type] || doc.type}
+                      </Badge>
+                      {doc.fileSize && (
+                        <span>{formatFileSize(doc.fileSize)}</span>
+                      )}
+                      <span>•</span>
+                      <span>{new Date(doc.createdAt).toLocaleDateString('de-DE')}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    title="Herunterladen"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    disabled={isDeleting && deletingId === doc.id}
+                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="Löschen"
+                  >
+                    {isDeleting && deletingId === doc.id ? (
+                      <div className="h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-gray-500">
+          <File className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p>Keine Dokumente vorhanden</p>
+          <p className="text-sm mt-1">Laden Sie Verträge, Ausweise oder andere Dokumente hoch</p>
+        </div>
+      )}
     </div>
   );
 }

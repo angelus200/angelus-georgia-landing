@@ -38,7 +38,11 @@ import {
   getPendingTasks,
   updateTaskStatus,
   deleteCrmTask,
-  getCrmStats
+  getCrmStats,
+  getLeadDocuments,
+  createLeadDocument,
+  deleteLeadDocument,
+  getLeadDocumentById
 } from "./db";
 import {
   servicesRouter,
@@ -756,6 +760,86 @@ export const appRouter = router({
     // Statistics
     stats: protectedProcedure.query(async () => {
       return await getCrmStats();
+    }),
+
+    // Document Management
+    documents: router({
+      list: protectedProcedure
+        .input(z.object({ leadId: z.number() }))
+        .query(async ({ input }) => {
+          return await getLeadDocuments(input.leadId);
+        }),
+      get: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          return await getLeadDocumentById(input.id);
+        }),
+      upload: protectedProcedure
+        .input(z.object({
+          leadId: z.number(),
+          name: z.string().min(1),
+          type: z.enum(['contract', 'id_document', 'proof_of_funds', 'correspondence', 'proposal', 'other']).optional(),
+          fileData: z.string(), // Base64 encoded file data
+          fileName: z.string(),
+          mimeType: z.string(),
+          fileSize: z.number(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          const { storagePut } = await import('./storage');
+          
+          // Decode base64 file data
+          const fileBuffer = Buffer.from(input.fileData, 'base64');
+          
+          // Generate unique file key
+          const timestamp = Date.now();
+          const sanitizedName = input.fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const s3Key = `crm/leads/${input.leadId}/documents/${timestamp}_${sanitizedName}`;
+          
+          // Upload to S3
+          const { url } = await storagePut(s3Key, fileBuffer, input.mimeType);
+          
+          // Save document record
+          const docId = await createLeadDocument({
+            leadId: input.leadId,
+            name: input.name,
+            type: input.type || 'other',
+            url,
+            s3Key,
+            fileSize: input.fileSize,
+            mimeType: input.mimeType,
+            uploadedBy: ctx.user?.id,
+          });
+          
+          // Log activity
+          await createLeadActivity({
+            leadId: input.leadId,
+            type: 'document',
+            title: 'Dokument hochgeladen',
+            description: `Dokument "${input.name}" wurde hinzugefügt`,
+            attachmentUrl: url,
+            createdBy: ctx.user?.id,
+          });
+          
+          return { success: true, documentId: docId, url };
+        }),
+      delete: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input, ctx }) => {
+          const doc = await deleteLeadDocument(input.id);
+          
+          // Log activity
+          if (doc.leadId) {
+            await createLeadActivity({
+              leadId: doc.leadId,
+              type: 'document',
+              title: 'Dokument gelöscht',
+              description: `Dokument "${doc.name}" wurde entfernt`,
+              createdBy: ctx.user?.id,
+            });
+          }
+          
+          return { success: true };
+        }),
     }),
   }),
 

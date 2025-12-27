@@ -1616,3 +1616,63 @@ function getStageLabel(stage: string): string {
   };
   return labels[stage] || stage;
 }
+
+
+// ============================================
+// Lead Documents Functions
+// ============================================
+
+export async function getLeadDocuments(leadId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(leadDocuments).where(eq(leadDocuments.leadId, leadId)).orderBy(desc(leadDocuments.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get lead documents:", error);
+    return [];
+  }
+}
+
+export async function createLeadDocument(data: InsertLeadDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    const result = await db.insert(leadDocuments).values(data);
+    return Number((result as any).insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create lead document:", error);
+    throw error;
+  }
+}
+
+export async function deleteLeadDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    // Get document first to return S3 key for deletion
+    const doc = await db.select().from(leadDocuments).where(eq(leadDocuments.id, id)).limit(1);
+    if (doc.length === 0) throw new Error("Document not found");
+    
+    await db.delete(leadDocuments).where(eq(leadDocuments.id, id));
+    return doc[0];
+  } catch (error) {
+    console.error("[Database] Failed to delete lead document:", error);
+    throw error;
+  }
+}
+
+export async function getLeadDocumentById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  try {
+    const result = await db.select().from(leadDocuments).where(eq(leadDocuments.id, id)).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get lead document:", error);
+    return null;
+  }
+}

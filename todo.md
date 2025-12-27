@@ -179,3 +179,10 @@
 - [x] Lead-Pipeline mit Drag & Drop (Kanban-Board)
 - [x] Kundendetailseite mit vollständiger Historie
 - [x] Aktivitäten-Log pro Kunde/Lead
+
+## Dokumenten-Upload für CRM-Leads
+- [x] Datenbank-Schema: Lead-Dokumente-Tabelle erstellen
+- [x] Backend-API: Dokument-Upload mit S3-Speicherung
+- [x] Backend-API: Dokumente auflisten und löschen
+- [x] Frontend: Dokument-Upload-Bereich im Lead-Detail
+- [x] Frontend: Dokumentenliste mit Download-Links
