@@ -347,20 +347,32 @@ export const appRouter = router({
           area: z.string(),
           bedrooms: z.number(),
           bathrooms: z.number(),
+          propertyType: z.enum(["apartment", "house", "villa", "commercial", "land"]).optional(),
           constructionStatus: z.enum(["planning", "foundation", "structure", "finishing", "completed"]),
-          completionDate: z.string(),
-          images: z.string(),
+          completionDate: z.string().optional(),
+          yearBuilt: z.number().nullable().optional(),
+          mainImage: z.string(),
+          images: z.string().optional(),
+          videos: z.string().optional(),
+          features: z.string().optional(),
           expectedReturn: z.string().optional(),
+          // Mietgarantie
           rentalGuarantee: z.boolean().optional(),
+          rentalGuaranteePercent: z.string().nullable().optional(),
+          rentalGuaranteeDuration: z.number().nullable().optional(),
+          // Ratenzahlung
           installmentAvailable: z.boolean().optional(),
-          minDownPayment: z.string().optional(),
-          maxInstallmentMonths: z.number().optional(),
+          minDownPayment: z.string().nullable().optional(),
+          maxInstallmentMonths: z.number().nullable().optional(),
+          installmentInterestRate: z.string().nullable().optional(),
+          status: z.enum(["available", "reserved", "sold"]).optional(),
         })
       )
       .mutation(async ({ input }) => {
         await createProperty({
           ...input,
-          completionDate: new Date(input.completionDate),
+          images: input.images || '[]',
+          completionDate: input.completionDate ? new Date(input.completionDate) : null,
         });
         return { success: true };
       }),
@@ -371,14 +383,38 @@ export const appRouter = router({
           data: z.object({
             title: z.string().optional(),
             description: z.string().optional(),
+            location: z.string().optional(),
+            city: z.string().optional(),
             price: z.string().optional(),
+            area: z.string().optional(),
+            bedrooms: z.number().optional(),
+            bathrooms: z.number().optional(),
+            propertyType: z.enum(["apartment", "house", "villa", "commercial", "land"]).optional(),
             constructionStatus: z.enum(["planning", "foundation", "structure", "finishing", "completed"]).optional(),
+            completionDate: z.string().nullable().optional(),
+            yearBuilt: z.number().nullable().optional(),
+            mainImage: z.string().optional(),
+            images: z.string().optional(),
+            videos: z.string().optional(),
+            features: z.string().optional(),
+            expectedReturn: z.string().optional(),
+            rentalGuarantee: z.boolean().optional(),
+            rentalGuaranteePercent: z.string().nullable().optional(),
+            rentalGuaranteeDuration: z.number().nullable().optional(),
+            installmentAvailable: z.boolean().optional(),
+            minDownPayment: z.string().nullable().optional(),
+            maxInstallmentMonths: z.number().nullable().optional(),
+            installmentInterestRate: z.string().nullable().optional(),
             status: z.enum(["available", "reserved", "sold"]).optional(),
           }),
         })
       )
       .mutation(async ({ input }) => {
-        await updateProperty(input.id, input.data);
+        const updateData: any = { ...input.data };
+        if (updateData.completionDate !== undefined) {
+          updateData.completionDate = updateData.completionDate ? new Date(updateData.completionDate) : null;
+        }
+        await updateProperty(input.id, updateData);
         return { success: true };
       }),
   }),

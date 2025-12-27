@@ -56,16 +56,30 @@ function PropertyFormModal({
     title: "",
     description: "",
     location: "",
+    city: "",
     price: "",
     size: "",
     bedrooms: "",
     bathrooms: "",
     imageUrl: "",
+    additionalImages: "",
+    videoUrl: "",
     status: "available",
     propertyType: "apartment",
+    constructionStatus: "completed",
+    completionDate: "",
     features: "",
     yearBuilt: "",
     expectedReturn: "",
+    // Mietgarantie
+    rentalGuarantee: false,
+    rentalGuaranteePercent: "",
+    rentalGuaranteeDuration: "",
+    // Ratenzahlung
+    installmentAvailable: true,
+    minDownPayment: "30",
+    maxInstallmentMonths: "36",
+    installmentInterestRate: "0",
   });
 
   useEffect(() => {
@@ -74,32 +88,56 @@ function PropertyFormModal({
         title: property.title || "",
         description: property.description || "",
         location: property.location || "",
+        city: property.city || "",
         price: property.price?.toString() || "",
-        size: property.size?.toString() || "",
+        size: property.size?.toString() || property.area?.toString() || "",
         bedrooms: property.bedrooms?.toString() || "",
         bathrooms: property.bathrooms?.toString() || "",
-        imageUrl: property.imageUrl || "",
+        imageUrl: property.imageUrl || property.mainImage || "",
+        additionalImages: property.additionalImages || property.images || "",
+        videoUrl: property.videoUrl || property.videos || "",
         status: property.status || "available",
         propertyType: property.propertyType || "apartment",
+        constructionStatus: property.constructionStatus || "completed",
+        completionDate: property.completionDate ? new Date(property.completionDate).toISOString().split('T')[0] : "",
         features: property.features || "",
         yearBuilt: property.yearBuilt?.toString() || "",
         expectedReturn: property.expectedReturn?.toString() || "",
+        rentalGuarantee: property.rentalGuarantee || false,
+        rentalGuaranteePercent: property.rentalGuaranteePercent?.toString() || "",
+        rentalGuaranteeDuration: property.rentalGuaranteeDuration?.toString() || "",
+        installmentAvailable: property.installmentAvailable !== false,
+        minDownPayment: property.minDownPayment?.toString() || "30",
+        maxInstallmentMonths: property.maxInstallmentMonths?.toString() || "36",
+        installmentInterestRate: property.installmentInterestRate?.toString() || "0",
       });
     } else {
       setFormData({
         title: "",
         description: "",
         location: "",
+        city: "",
         price: "",
         size: "",
         bedrooms: "",
         bathrooms: "",
         imageUrl: "",
+        additionalImages: "",
+        videoUrl: "",
         status: "available",
         propertyType: "apartment",
+        constructionStatus: "completed",
+        completionDate: "",
         features: "",
         yearBuilt: "",
         expectedReturn: "",
+        rentalGuarantee: false,
+        rentalGuaranteePercent: "",
+        rentalGuaranteeDuration: "",
+        installmentAvailable: true,
+        minDownPayment: "30",
+        maxInstallmentMonths: "36",
+        installmentInterestRate: "0",
       });
     }
   }, [property, isOpen]);
@@ -116,158 +154,347 @@ function PropertyFormModal({
       bathrooms: parseInt(formData.bathrooms) || 0,
       yearBuilt: parseInt(formData.yearBuilt) || null,
       expectedReturn: parseFloat(formData.expectedReturn) || null,
+      completionDate: formData.completionDate || null,
+      rentalGuaranteePercent: parseFloat(formData.rentalGuaranteePercent) || null,
+      rentalGuaranteeDuration: parseInt(formData.rentalGuaranteeDuration) || null,
+      minDownPayment: parseFloat(formData.minDownPayment) || 30,
+      maxInstallmentMonths: parseInt(formData.maxInstallmentMonths) || 36,
+      installmentInterestRate: parseFloat(formData.installmentInterestRate) || 0,
     });
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
             {property ? "Immobilie bearbeiten" : "Neue Immobilie erstellen"}
           </h2>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. Luxus-Apartment in Batumi"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 h-24"
-                placeholder="Detaillierte Beschreibung der Immobilie..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Standort *</label>
-              <input
-                type="text"
-                required
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. Batumi, Georgien"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Preis (€) *</label>
-              <input
-                type="number"
-                required
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. 150000"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Größe (m²)</label>
-              <input
-                type="number"
-                value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. 85"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Schlafzimmer</label>
-              <input
-                type="number"
-                value={formData.bedrooms}
-                onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. 2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Badezimmer</label>
-              <input
-                type="number"
-                value={formData.bathrooms}
-                onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. 1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Baujahr</label>
-              <input
-                type="number"
-                value={formData.yearBuilt}
-                onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. 2023"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Erwartete Rendite (%)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={formData.expectedReturn}
-                onChange={(e) => setFormData({ ...formData, expectedReturn: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. 8.5"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Immobilientyp</label>
-              <select
-                value={formData.propertyType}
-                onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              >
-                <option value="apartment">Apartment</option>
-                <option value="house">Haus</option>
-                <option value="commercial">Gewerbe</option>
-                <option value="land">Grundstück</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              >
-                <option value="available">Verfügbar</option>
-                <option value="reserved">Reserviert</option>
-                <option value="sold">Verkauft</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bild-URL</label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Features (kommagetrennt)</label>
-              <input
-                type="text"
-                value={formData.features}
-                onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="z.B. Meerblick, Balkon, Klimaanlage"
-              />
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Grunddaten */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">Grunddaten</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. Luxus-Apartment in Batumi"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 h-24"
+                  placeholder="Detaillierte Beschreibung der Immobilie..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Standort/Adresse *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. Rustaveli Avenue 15"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stadt *</label>
+                <select
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  required
+                >
+                  <option value="">Stadt wählen...</option>
+                  <option value="Batumi">Batumi</option>
+                  <option value="Tiflis">Tiflis</option>
+                  <option value="Kutaissi">Kutaissi</option>
+                  <option value="Kobuleti">Kobuleti</option>
+                  <option value="Gudauri">Gudauri</option>
+                  <option value="Bakuriani">Bakuriani</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preis (€) *</label>
+                <input
+                  type="number"
+                  required
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 150000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Größe (m²) *</label>
+                <input
+                  type="number"
+                  required
+                  value={formData.size}
+                  onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 85"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Schlafzimmer</label>
+                <input
+                  type="number"
+                  value={formData.bedrooms}
+                  onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Badezimmer</label>
+                <input
+                  type="number"
+                  value={formData.bathrooms}
+                  onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Immobilientyp</label>
+                <select
+                  value={formData.propertyType}
+                  onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="apartment">Apartment</option>
+                  <option value="house">Haus</option>
+                  <option value="villa">Villa</option>
+                  <option value="commercial">Gewerbe</option>
+                  <option value="land">Grundstück</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="available">Verfügbar</option>
+                  <option value="reserved">Reserviert</option>
+                  <option value="sold">Verkauft</option>
+                </select>
+              </div>
             </div>
           </div>
+
+          {/* Baufortschritt */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">Baufortschritt & Fertigstellung</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Baufortschritt *</label>
+                <select
+                  value={formData.constructionStatus}
+                  onChange={(e) => setFormData({ ...formData, constructionStatus: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  required
+                >
+                  <option value="planning">In Planung</option>
+                  <option value="foundation">Fundament</option>
+                  <option value="structure">Rohbau</option>
+                  <option value="finishing">Innenausbau</option>
+                  <option value="completed">Fertiggestellt</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fertigstellungsdatum</label>
+                <input
+                  type="date"
+                  value={formData.completionDate}
+                  onChange={(e) => setFormData({ ...formData, completionDate: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Baujahr</label>
+                <input
+                  type="number"
+                  value={formData.yearBuilt}
+                  onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 2024"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Erwartete Rendite (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.expectedReturn}
+                  onChange={(e) => setFormData({ ...formData, expectedReturn: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 8.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Mietgarantie */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">Mietgarantie</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rentalGuarantee"
+                  checked={formData.rentalGuarantee}
+                  onChange={(e) => setFormData({ ...formData, rentalGuarantee: e.target.checked })}
+                  className="h-4 w-4 text-[#C4A052] border-gray-300 rounded"
+                />
+                <label htmlFor="rentalGuarantee" className="ml-2 text-sm font-medium text-gray-700">
+                  Mietgarantie verfügbar
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Garantie (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.rentalGuaranteePercent}
+                  onChange={(e) => setFormData({ ...formData, rentalGuaranteePercent: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 7"
+                  disabled={!formData.rentalGuarantee}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dauer (Monate)</label>
+                <input
+                  type="number"
+                  value={formData.rentalGuaranteeDuration}
+                  onChange={(e) => setFormData({ ...formData, rentalGuaranteeDuration: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 36"
+                  disabled={!formData.rentalGuarantee}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Ratenzahlung */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">Ratenzahlung</h3>
+            <div className="grid grid-cols-4 gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="installmentAvailable"
+                  checked={formData.installmentAvailable}
+                  onChange={(e) => setFormData({ ...formData, installmentAvailable: e.target.checked })}
+                  className="h-4 w-4 text-[#C4A052] border-gray-300 rounded"
+                />
+                <label htmlFor="installmentAvailable" className="ml-2 text-sm font-medium text-gray-700">
+                  Ratenzahlung möglich
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Min. Anzahlung (%)</label>
+                <input
+                  type="number"
+                  value={formData.minDownPayment}
+                  onChange={(e) => setFormData({ ...formData, minDownPayment: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 30"
+                  disabled={!formData.installmentAvailable}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Max. Laufzeit (Monate)</label>
+                <input
+                  type="number"
+                  value={formData.maxInstallmentMonths}
+                  onChange={(e) => setFormData({ ...formData, maxInstallmentMonths: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 36"
+                  disabled={!formData.installmentAvailable}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Zinssatz (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.installmentInterestRate}
+                  onChange={(e) => setFormData({ ...formData, installmentInterestRate: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="z.B. 0"
+                  disabled={!formData.installmentAvailable}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bilder & Medien */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">Bilder & Medien</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hauptbild-URL *</label>
+                <input
+                  type="url"
+                  required
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="https://example.com/hauptbild.jpg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Weitere Bilder (URLs, kommagetrennt)</label>
+                <textarea
+                  value={formData.additionalImages}
+                  onChange={(e) => setFormData({ ...formData, additionalImages: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 h-20"
+                  placeholder="https://example.com/bild1.jpg, https://example.com/bild2.jpg"
+                />
+                <p className="text-xs text-gray-500 mt-1">Mehrere Bild-URLs durch Komma getrennt eingeben</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Video-URL (YouTube/Vimeo)</label>
+                <input
+                  type="url"
+                  value={formData.videoUrl}
+                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Features */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b">Ausstattung</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Features (kommagetrennt)</label>
+              <textarea
+                value={formData.features}
+                onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 h-20"
+                placeholder="z.B. Meerblick, Balkon, Klimaanlage, Pool, Parkplatz, Fitnessstudio, 24h Security"
+              />
+              <p className="text-xs text-gray-500 mt-1">Ausstattungsmerkmale durch Komma getrennt eingeben</p>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -344,9 +571,38 @@ function AdminDirectDashboard() {
         ? "/api/trpc/properties.update" 
         : "/api/trpc/properties.create";
       
+      // Daten für API formatieren
+      const formattedData = {
+        title: propertyData.title,
+        description: propertyData.description || "",
+        location: propertyData.location,
+        city: propertyData.city,
+        price: String(propertyData.price),
+        area: String(propertyData.size || propertyData.area || 0),
+        bedrooms: Number(propertyData.bedrooms) || 0,
+        bathrooms: Number(propertyData.bathrooms) || 0,
+        propertyType: propertyData.propertyType || "apartment",
+        constructionStatus: propertyData.constructionStatus || "completed",
+        completionDate: propertyData.completionDate || undefined,
+        yearBuilt: propertyData.yearBuilt ? Number(propertyData.yearBuilt) : null,
+        mainImage: propertyData.imageUrl || propertyData.mainImage || "",
+        images: propertyData.additionalImages || propertyData.images || "[]",
+        videos: propertyData.videoUrl || propertyData.videos || "",
+        features: propertyData.features || "",
+        expectedReturn: propertyData.expectedReturn ? String(propertyData.expectedReturn) : undefined,
+        rentalGuarantee: Boolean(propertyData.rentalGuarantee),
+        rentalGuaranteePercent: propertyData.rentalGuaranteePercent ? String(propertyData.rentalGuaranteePercent) : null,
+        rentalGuaranteeDuration: propertyData.rentalGuaranteeDuration ? Number(propertyData.rentalGuaranteeDuration) : null,
+        installmentAvailable: Boolean(propertyData.installmentAvailable),
+        minDownPayment: propertyData.minDownPayment ? String(propertyData.minDownPayment) : "30",
+        maxInstallmentMonths: propertyData.maxInstallmentMonths ? Number(propertyData.maxInstallmentMonths) : 36,
+        installmentInterestRate: propertyData.installmentInterestRate ? String(propertyData.installmentInterestRate) : "0",
+        status: propertyData.status || "available",
+      };
+      
       const body = editingProperty 
-        ? { id: editingProperty.id, ...propertyData }
-        : propertyData;
+        ? { id: editingProperty.id, data: formattedData }
+        : formattedData;
 
       const res = await fetch(endpoint, {
         method: "POST",

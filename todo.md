@@ -160,3 +160,12 @@
 ## E-Mail-Absender Verbesserungen
 - [x] Absender-Name auf "Angelus Management Georgia" setzen
 - [x] Reply-To Adresse auf angelusmanagementgeorgia@gmail.com setzen
+
+## Admin-Formular Erweiterung für Immobilien
+- [x] Stadt-Feld hinzufügen
+- [x] Baufortschritt-Dropdown hinzufügen (planning/foundation/structure/finishing/completed)
+- [x] Fertigstellungsdatum-Feld hinzufügen
+- [x] Mietgarantie-Optionen hinzufügen (Ja/Nein, Prozent, Dauer)
+- [x] Ratenzahlungsoptionen hinzufügen (Min. Anzahlung, Max. Laufzeit, Zinssatz)
+- [x] Mehrere Bilder-Upload ermöglichen (Galerie)
+- [x] Video-URLs Feld hinzufügen
