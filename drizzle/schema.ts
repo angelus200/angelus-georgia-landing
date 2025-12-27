@@ -586,3 +586,32 @@ export const leadDocuments = mysqlTable("lead_documents", {
 
 export type LeadDocument = typeof leadDocuments.$inferSelect;
 export type InsertLeadDocument = typeof leadDocuments.$inferInsert;
+
+
+/**
+ * Videos - Video gallery/media library
+ */
+export const videos = mysqlTable("videos", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  /** Video URL (YouTube, Vimeo, or direct link) */
+  videoUrl: varchar("videoUrl", { length: 500 }).notNull(),
+  /** Thumbnail image URL */
+  thumbnailUrl: varchar("thumbnailUrl", { length: 500 }),
+  /** Video category */
+  category: mysqlEnum("category", ["about_us", "properties", "georgia", "testimonials", "projects", "other"]).default("other").notNull(),
+  /** Video duration in seconds */
+  duration: int("duration"),
+  /** Display order within category */
+  sortOrder: int("sortOrder").default(0),
+  /** Featured on homepage */
+  featured: boolean("featured").default(false),
+  /** Published status */
+  published: boolean("published").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Video = typeof videos.$inferSelect;
+export type InsertVideo = typeof videos.$inferInsert;

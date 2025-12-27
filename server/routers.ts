@@ -42,7 +42,14 @@ import {
   getLeadDocuments,
   createLeadDocument,
   deleteLeadDocument,
-  getLeadDocumentById
+  getLeadDocumentById,
+  // Video functions
+  createVideo,
+  getVideos,
+  getVideoById,
+  updateVideo,
+  deleteVideo,
+  getFeaturedVideos
 } from "./db";
 import {
   servicesRouter,
@@ -1135,6 +1142,71 @@ export const appRouter = router({
           .where(eq(users.id, ctx.user.id));
         
         return { success: true };
+      }),
+  }),
+
+  // ==================== VIDEO ROUTER ====================
+  videos: router({
+    list: publicProcedure
+      .input(z.object({
+        category: z.string().optional(),
+        featured: z.boolean().optional(),
+        published: z.boolean().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return await getVideos(input);
+      }),
+
+    getFeatured: publicProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await getFeaturedVideos(input?.limit || 4);
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await getVideoById(input.id);
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        description: z.string().optional(),
+        videoUrl: z.string().url(),
+        thumbnailUrl: z.string().url().optional(),
+        category: z.enum(["about_us", "properties", "georgia", "testimonials", "projects", "other"]),
+        duration: z.number().optional(),
+        sortOrder: z.number().optional(),
+        featured: z.boolean().optional(),
+        published: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await createVideo(input);
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).optional(),
+        description: z.string().optional(),
+        videoUrl: z.string().url().optional(),
+        thumbnailUrl: z.string().url().optional(),
+        category: z.enum(["about_us", "properties", "georgia", "testimonials", "projects", "other"]).optional(),
+        duration: z.number().optional(),
+        sortOrder: z.number().optional(),
+        featured: z.boolean().optional(),
+        published: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return await updateVideo(id, data);
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await deleteVideo(input.id);
       }),
   }),
 });

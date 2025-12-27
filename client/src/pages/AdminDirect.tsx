@@ -787,6 +787,16 @@ function AdminDirectDashboard() {
           >
             Bestellungen
           </button>
+          <button
+            onClick={() => setActiveTab("videos")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "videos" 
+                ? "bg-white text-gray-900 shadow-sm" 
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            🎥 Videos
+          </button>
           <Link
             href="/crm"
             className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-[#C4A052] text-white hover:bg-[#B39142]"
@@ -1011,6 +1021,11 @@ function AdminDirectDashboard() {
               {/* Orders Tab */}
               {activeTab === "orders" && (
                 <OrdersTab />
+              )}
+
+              {/* Videos Tab */}
+              {activeTab === "videos" && (
+                <VideosTab />
               )}
             </>
           )}
@@ -1773,6 +1788,399 @@ function OrdersTab() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+
+// Videos Tab Component
+function VideosTab() {
+  const [videos, setVideos] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<any>(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const categories = [
+    { value: "about_us", label: "Über uns" },
+    { value: "properties", label: "Immobilien" },
+    { value: "georgia", label: "Georgien" },
+    { value: "testimonials", label: "Kundenstimmen" },
+    { value: "projects", label: "Projekte" },
+    { value: "other", label: "Sonstiges" },
+  ];
+
+  const loadVideos = async () => {
+    try {
+      const res = await fetch("/api/trpc/videos.list?input={}");
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data.result?.data?.json || data.result?.data || []);
+      }
+    } catch (error) {
+      console.error("Fehler beim Laden:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadVideos();
+  }, []);
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Video wirklich löschen?")) return;
+    try {
+      await fetch("/api/trpc/videos.delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      await loadVideos();
+    } catch (error) {
+      console.error("Fehler:", error);
+    }
+  };
+
+  const handleSave = async (videoData: any) => {
+    try {
+      const endpoint = editingVideo ? "/api/trpc/videos.update" : "/api/trpc/videos.create";
+      const body = editingVideo ? { id: editingVideo.id, ...videoData } : videoData;
+      
+      await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      
+      await loadVideos();
+      setShowModal(false);
+      setEditingVideo(null);
+    } catch (error) {
+      console.error("Fehler:", error);
+      alert("Fehler beim Speichern");
+    }
+  };
+
+  const filteredVideos = categoryFilter === "all" 
+    ? videos 
+    : videos.filter(v => v.category === categoryFilter);
+
+  // Extract YouTube thumbnail from URL
+  const getYouTubeThumbnail = (url: string) => {
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    if (match) {
+      return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
+    }
+    return null;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4A052] mx-auto mb-4"></div>
+        <p className="text-gray-600">Videos werden geladen...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Video-Galerie</h2>
+          <p className="text-sm text-gray-600">Verwalten Sie Ihre Videos und Mediathek</p>
+        </div>
+        <div className="flex gap-3">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="all">Alle Kategorien</option>
+            {categories.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => { setEditingVideo(null); setShowModal(true); }}
+            className="px-4 py-2 bg-[#C4A052] text-white rounded-md text-sm hover:bg-[#B39142]"
+          >
+            + Neues Video
+          </button>
+        </div>
+      </div>
+
+      {filteredVideos.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <p className="text-gray-500 mb-4">Noch keine Videos vorhanden</p>
+          <button
+            onClick={() => { setEditingVideo(null); setShowModal(true); }}
+            className="px-4 py-2 bg-[#C4A052] text-white rounded-md text-sm hover:bg-[#B39142]"
+          >
+            Erstes Video hinzufügen
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredVideos.map((video: any) => {
+            const thumbnail = video.thumbnailUrl || getYouTubeThumbnail(video.videoUrl);
+            return (
+              <div key={video.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="relative aspect-video bg-gray-100">
+                  {thumbnail ? (
+                    <img src={thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      🎥
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <a
+                      href={video.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center"
+                    >
+                      ▶️
+                    </a>
+                  </div>
+                  {video.featured && (
+                    <span className="absolute top-2 left-2 px-2 py-1 bg-[#C4A052] text-white text-xs rounded">
+                      Featured
+                    </span>
+                  )}
+                  {!video.published && (
+                    <span className="absolute top-2 right-2 px-2 py-1 bg-gray-500 text-white text-xs rounded">
+                      Entwurf
+                    </span>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-medium text-gray-900 truncate">{video.title}</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {categories.find(c => c.value === video.category)?.label || video.category}
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => { setEditingVideo(video); setShowModal(true); }}
+                      className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      Bearbeiten
+                    </button>
+                    <button
+                      onClick={() => handleDelete(video.id)}
+                      className="px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-md hover:bg-red-50"
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Video Modal */}
+      {showModal && (
+        <VideoFormModal
+          isOpen={showModal}
+          onClose={() => { setShowModal(false); setEditingVideo(null); }}
+          onSave={handleSave}
+          video={editingVideo}
+          categories={categories}
+        />
+      )}
+    </div>
+  );
+}
+
+// Video Form Modal
+function VideoFormModal({
+  isOpen,
+  onClose,
+  onSave,
+  video,
+  categories
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: any) => void;
+  video?: any;
+  categories: { value: string; label: string }[];
+}) {
+  const [formData, setFormData] = useState({
+    title: video?.title || "",
+    description: video?.description || "",
+    videoUrl: video?.videoUrl || "",
+    thumbnailUrl: video?.thumbnailUrl || "",
+    category: video?.category || "other",
+    sortOrder: video?.sortOrder || 0,
+    featured: video?.featured || false,
+    published: video?.published ?? true,
+  });
+
+  useEffect(() => {
+    if (video) {
+      setFormData({
+        title: video.title || "",
+        description: video.description || "",
+        videoUrl: video.videoUrl || "",
+        thumbnailUrl: video.thumbnailUrl || "",
+        category: video.category || "other",
+        sortOrder: video.sortOrder || 0,
+        featured: video.featured || false,
+        published: video.published ?? true,
+      });
+    }
+  }, [video]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.videoUrl) {
+      alert("Titel und Video-URL sind erforderlich");
+      return;
+    }
+    onSave(formData);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {video ? "Video bearbeiten" : "Neues Video hinzufügen"}
+          </h2>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Titel *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              placeholder="z.B. Unternehmensvorstellung"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Video-URL * (YouTube, Vimeo)
+            </label>
+            <input
+              type="url"
+              value={formData.videoUrl}
+              onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              placeholder="https://www.youtube.com/watch?v=..."
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Beschreibung
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              rows={3}
+              placeholder="Kurze Beschreibung des Videos..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Thumbnail-URL (optional)
+            </label>
+            <input
+              type="url"
+              value={formData.thumbnailUrl}
+              onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              placeholder="Wird automatisch von YouTube geholt wenn leer"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kategorie
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              >
+                {categories.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sortierung
+              </label>
+              <input
+                type="number"
+                value={formData.sortOrder}
+                onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-6">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="featured"
+                checked={formData.featured}
+                onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+              />
+              <label htmlFor="featured" className="text-sm text-gray-700">
+                Auf Startseite anzeigen
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="published"
+                checked={formData.published}
+                onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
+              />
+              <label htmlFor="published" className="text-sm text-gray-700">
+                Veröffentlicht
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm text-white bg-[#C4A052] rounded-md hover:bg-[#B39142]"
+            >
+              Speichern
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

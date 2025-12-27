@@ -198,3 +198,11 @@
 - [x] Sharing-Komponente mit WhatsApp, Facebook, Twitter, E-Mail erstellen
 - [x] In Immobilien-Detailseite einbinden
 - [x] Sharing-URL mit Immobilien-Titel und Beschreibung generieren
+
+## Video-Galerie/Mediathek
+- [x] Datenbank-Schema: Videos-Tabelle mit Kategorien
+- [x] Backend-API: CRUD für Videos
+- [x] Admin: Video-Verwaltung (hinzufügen, bearbeiten, löschen)
+- [x] Frontend: /videos Seite mit Kategorien und Lightbox
+- [x] Frontend: Video-Sektion auf Startseite
+- [x] Navigation: Link zu Videos/Mediathek hinzufügen

@@ -20,7 +20,9 @@ import {
   Globe,
   Target,
   Menu,
-  X
+  X,
+  Play,
+  ArrowRight
 } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { toast } from "sonner";
@@ -75,6 +77,7 @@ export default function Home() {
               <a href="/#projects" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Projekte</a>
               <a href="/immobilien" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Immobilien</a>
               <a href="/service-pakete" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Services</a>
+              <a href="/videos" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Videos</a>
               <a href="/#contact" className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors">Kontakt</a>
             </nav>
             {/* Mobile Menu Button */}
@@ -140,6 +143,13 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Services
+              </a>
+              <a 
+                href="/videos" 
+                className="text-base font-medium text-foreground hover:text-gold transition-colors py-2 border-b border-border/50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Videos
               </a>
               <a 
                 href="/#contact" 
@@ -644,6 +654,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Video Section */}
+      <VideoSection />
+
       {/* Contact Form Section */}
       <section id="contact" className="py-20 bg-card">
         <div className="container max-w-4xl">
@@ -861,5 +874,126 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+
+// Video Section Component
+function VideoSection() {
+  const { data: videos, isLoading } = trpc.videos.getFeatured.useQuery({ limit: 3 });
+  const [selectedVideo, setSelectedVideo] = useState<any>(null);
+
+  // Extract YouTube video ID from URL
+  const getYouTubeId = (url: string) => {
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : null;
+  };
+
+  // Get thumbnail URL
+  const getThumbnail = (video: any) => {
+    if (video.thumbnailUrl) return video.thumbnailUrl;
+    const youtubeId = getYouTubeId(video.videoUrl);
+    if (youtubeId) return `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
+    return null;
+  };
+
+  // Get embed URL for video player
+  const getEmbedUrl = (url: string) => {
+    const youtubeId = getYouTubeId(url);
+    if (youtubeId) return `https://www.youtube.com/embed/${youtubeId}?autoplay=1`;
+    return url;
+  };
+
+  // Don't render if no videos
+  if (isLoading || !videos || videos.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <section className="py-20 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] text-white">
+        <div className="container">
+          <div className="text-center mb-12 space-y-4">
+            <h2 className="text-4xl lg:text-5xl font-bold">
+              Einblicke in unsere <span className="text-gold">Projekte</span>
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Entdecken Sie unsere Videos über Immobilieninvestments in Georgien
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {videos.map((video: any) => {
+              const thumbnail = getThumbnail(video);
+              return (
+                <div
+                  key={video.id}
+                  className="group relative rounded-xl overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedVideo(video)}
+                >
+                  <div className="aspect-video bg-gray-800">
+                    {thumbnail ? (
+                      <img
+                        src={thumbnail}
+                        alt={video.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Play className="h-16 w-16 text-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black/50 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                      <Play className="h-8 w-8 text-white ml-1" fill="white" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                    <h3 className="font-semibold text-white">{video.title}</h3>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-center mt-10">
+            <a
+              href="/videos"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gold text-white rounded-lg hover:bg-gold/90 transition-colors"
+            >
+              Alle Videos ansehen
+              <ArrowRight className="h-5 w-5" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Modal */}
+      {selectedVideo && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedVideo(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gold transition-colors"
+            onClick={() => setSelectedVideo(null)}
+          >
+            <X className="h-8 w-8" />
+          </button>
+          <div
+            className="w-full max-w-5xl aspect-video"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <iframe
+              src={getEmbedUrl(selectedVideo.videoUrl)}
+              className="w-full h-full rounded-lg"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

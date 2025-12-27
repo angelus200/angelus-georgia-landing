@@ -23,7 +23,10 @@ import {
   InsertCrmTask,
   CrmTask,
   leadDocuments,
-  InsertLeadDocument
+  InsertLeadDocument,
+  videos,
+  InsertVideo,
+  Video
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1674,5 +1677,105 @@ export async function getLeadDocumentById(id: number) {
   } catch (error) {
     console.error("[Database] Failed to get lead document:", error);
     return null;
+  }
+}
+
+
+// ==================== VIDEO FUNCTIONS ====================
+
+export async function createVideo(video: InsertVideo) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    const result = await db.insert(videos).values(video);
+    return { id: result[0].insertId, ...video };
+  } catch (error) {
+    console.error("[Database] Failed to create video:", error);
+    throw error;
+  }
+}
+
+export async function getVideos(options?: { category?: string; featured?: boolean; published?: boolean }) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    let query = db.select().from(videos);
+    
+    const conditions = [];
+    if (options?.category) {
+      conditions.push(eq(videos.category, options.category as any));
+    }
+    if (options?.featured !== undefined) {
+      conditions.push(eq(videos.featured, options.featured));
+    }
+    if (options?.published !== undefined) {
+      conditions.push(eq(videos.published, options.published));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(videos.sortOrder, desc(videos.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get videos:", error);
+    return [];
+  }
+}
+
+export async function getVideoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  try {
+    const result = await db.select().from(videos).where(eq(videos.id, id)).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to get video:", error);
+    return null;
+  }
+}
+
+export async function updateVideo(id: number, data: Partial<InsertVideo>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    await db.update(videos).set(data).where(eq(videos.id, id));
+    return await getVideoById(id);
+  } catch (error) {
+    console.error("[Database] Failed to update video:", error);
+    throw error;
+  }
+}
+
+export async function deleteVideo(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    await db.delete(videos).where(eq(videos.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete video:", error);
+    throw error;
+  }
+}
+
+export async function getFeaturedVideos(limit: number = 4) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select()
+      .from(videos)
+      .where(and(eq(videos.featured, true), eq(videos.published, true)))
+      .orderBy(videos.sortOrder)
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Failed to get featured videos:", error);
+    return [];
   }
 }
