@@ -30,7 +30,9 @@ import {
   File,
   FileCheck,
   FileBadge,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ArrowLeft,
+  LayoutDashboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,6 +193,14 @@ export default function CRM() {
               <p className="text-sm text-gray-500">Kundenbeziehungsmanagement</p>
             </div>
             <div className="flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setLocation("/admin")}
+                className="border-gray-300"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Admin Dashboard
+              </Button>
               <LanguageSwitcher />
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

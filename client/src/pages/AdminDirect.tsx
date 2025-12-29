@@ -608,16 +608,20 @@ function AdminDirectDashboard() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ json: body }),
       });
 
-      if (res.ok) {
+      const responseData = await res.json();
+      
+      if (res.ok && responseData.result?.data?.json?.success) {
         await loadData();
         setShowPropertyModal(false);
         setEditingProperty(null);
         alert(editingProperty ? "Immobilie aktualisiert!" : "Immobilie erstellt!");
       } else {
-        alert("Fehler beim Speichern");
+        const errorMsg = responseData.error?.message || responseData.error?.json?.message || "Unbekannter Fehler";
+        console.error("API Error:", responseData);
+        alert(`Fehler beim Speichern: ${errorMsg}`);
       }
     } catch (error) {
       console.error("Fehler:", error);

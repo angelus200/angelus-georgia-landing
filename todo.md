@@ -257,3 +257,7 @@
 - [x] hreflang-Tags im HTML-Head hinzufügen
 - [x] Canonical-URLs für jede Sprachversion
 - [x] Meta-Tags für Sprache setzen
+
+## Bug-Fixes (29.12.2025)
+- [x] CRM-Seite: Navigation zurück zum Admin-Dashboard hinzufügen
+- [x] Immobilien-Formular: "Fehler beim Speichern" beheben
