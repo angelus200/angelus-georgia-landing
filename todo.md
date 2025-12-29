@@ -261,3 +261,10 @@
 ## Bug-Fixes (29.12.2025)
 - [x] CRM-Seite: Navigation zurück zum Admin-Dashboard hinzufügen
 - [x] Immobilien-Formular: "Fehler beim Speichern" beheben
+
+## Services-Verwaltung im Admin-Dashboard
+- [x] Service-Erstellungsformular in AdminDirect implementieren
+- [x] Service-Bearbeitungsfunktion in AdminDirect hinzufügen
+- [x] Service-Löschfunktion in AdminDirect hinzufügen
+- [x] API-Integration für Services CRUD
+- [x] Services-Tab im regulären Admin-Dashboard (Admin.tsx) hinzufügen

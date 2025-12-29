@@ -61,6 +61,17 @@ export default function Admin() {
   const [selectedInquiry, setSelectedInquiry] = useState<number | null>(null);
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
+  
+  // Services State
+  const [showServiceDialog, setShowServiceDialog] = useState(false);
+  const [editingService, setEditingService] = useState<any>(null);
+  const [serviceForm, setServiceForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category: "company_formation",
+    isActive: true,
+  });
 
   // Property Form State - MUST be before any conditional returns
   const [propertyForm, setPropertyForm] = useState({
@@ -151,6 +162,48 @@ export default function Admin() {
     onSuccess: () => {
       toast.success("Buchungsstatus aktualisiert");
       refetchBookings();
+    },
+    onError: (error) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  // Services
+  const { data: services, isLoading: servicesLoading, refetch: refetchServices } = trpc.services.list.useQuery(
+    undefined,
+    { enabled: !!user && user.role === "admin" }
+  );
+
+  const createServiceMutation = trpc.services.create.useMutation({
+    onSuccess: () => {
+      toast.success("Dienstleistung erfolgreich hinzugefügt");
+      refetchServices();
+      setShowServiceDialog(false);
+      setEditingService(null);
+      setServiceForm({ name: "", description: "", price: "", category: "company_formation", isActive: true });
+    },
+    onError: (error) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  const updateServiceMutation = trpc.services.update.useMutation({
+    onSuccess: () => {
+      toast.success("Dienstleistung erfolgreich aktualisiert");
+      refetchServices();
+      setShowServiceDialog(false);
+      setEditingService(null);
+      setServiceForm({ name: "", description: "", price: "", category: "company_formation", isActive: true });
+    },
+    onError: (error) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  const deleteServiceMutation = trpc.services.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Dienstleistung gelöscht");
+      refetchServices();
     },
     onError: (error) => {
       toast.error(`Fehler: ${error.message}`);
@@ -324,9 +377,10 @@ export default function Admin() {
       {/* Main Content */}
       <main className="container py-8">
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="contacts">Kontaktanfragen</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
+            <TabsTrigger value="services">Dienstleistungen</TabsTrigger>
             <TabsTrigger value="bookings">Buchungen</TabsTrigger>
           </TabsList>
 
@@ -731,6 +785,212 @@ export default function Admin() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     Noch keine Immobilien vorhanden
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Services Tab */}
+          <TabsContent value="services" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Dienstleistungen</CardTitle>
+                    <CardDescription>
+                      Verwalten Sie Ihre Dienstleistungsangebote
+                    </CardDescription>
+                  </div>
+                  <Dialog open={showServiceDialog} onOpenChange={(open) => {
+                    setShowServiceDialog(open);
+                    if (!open) {
+                      setEditingService(null);
+                      setServiceForm({ name: "", description: "", price: "", category: "company_formation", isActive: true });
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-[#C4A052] hover:bg-[#B08D3A]">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Neue Dienstleistung
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>{editingService ? "Dienstleistung bearbeiten" : "Neue Dienstleistung"}</DialogTitle>
+                        <DialogDescription>
+                          {editingService ? "Bearbeiten Sie die Dienstleistung" : "Fügen Sie eine neue Dienstleistung hinzu"}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if (editingService) {
+                          updateServiceMutation.mutate({
+                            id: editingService.id,
+                            data: {
+                              name: serviceForm.name,
+                              description: serviceForm.description,
+                              price: serviceForm.price,
+                              isActive: serviceForm.isActive,
+                            },
+                          });
+                        } else {
+                          createServiceMutation.mutate({
+                            name: serviceForm.name,
+                            description: serviceForm.description,
+                            price: serviceForm.price,
+                            category: serviceForm.category,
+                            isActive: serviceForm.isActive,
+                          });
+                        }
+                      }} className="space-y-4">
+                        <div>
+                          <Label htmlFor="serviceName">Name</Label>
+                          <Input
+                            id="serviceName"
+                            value={serviceForm.name}
+                            onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="serviceDescription">Beschreibung</Label>
+                          <Textarea
+                            id="serviceDescription"
+                            value={serviceForm.description}
+                            onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                            rows={3}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="servicePrice">Preis (€)</Label>
+                          <Input
+                            id="servicePrice"
+                            type="number"
+                            step="0.01"
+                            value={serviceForm.price}
+                            onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                            required
+                          />
+                        </div>
+                        {!editingService && (
+                          <div>
+                            <Label htmlFor="serviceCategory">Kategorie</Label>
+                            <Select
+                              value={serviceForm.category}
+                              onValueChange={(value) => setServiceForm({ ...serviceForm, category: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="company_formation">Firmengründung</SelectItem>
+                                <SelectItem value="rental_guarantee">Mietgarantie</SelectItem>
+                                <SelectItem value="property_management">Property Management</SelectItem>
+                                <SelectItem value="legal_services">Rechtsberatung</SelectItem>
+                                <SelectItem value="other">Sonstiges</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="serviceActive"
+                            checked={serviceForm.isActive}
+                            onChange={(e) => setServiceForm({ ...serviceForm, isActive: e.target.checked })}
+                          />
+                          <Label htmlFor="serviceActive">Aktiv</Label>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-4">
+                          <Button type="button" variant="outline" onClick={() => setShowServiceDialog(false)}>
+                            Abbrechen
+                          </Button>
+                          <Button type="submit" className="bg-[#C4A052] hover:bg-[#B08D3A]">
+                            {editingService ? "Aktualisieren" : "Hinzufügen"}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {servicesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-gold" />
+                  </div>
+                ) : services && services.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Beschreibung</TableHead>
+                        <TableHead>Preis</TableHead>
+                        <TableHead>Kategorie</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Aktionen</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {services.map((service: any) => (
+                        <TableRow key={service.id}>
+                          <TableCell className="font-medium">{service.name}</TableCell>
+                          <TableCell className="max-w-xs truncate">{service.description || "-"}</TableCell>
+                          <TableCell>{parseFloat(service.price).toLocaleString('de-DE')} €</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {service.category === "company_formation" ? "Firmengründung" :
+                               service.category === "rental_guarantee" ? "Mietgarantie" :
+                               service.category === "property_management" ? "Property Management" :
+                               service.category === "legal_services" ? "Rechtsberatung" : "Sonstiges"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={service.isActive ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}>
+                              {service.isActive ? "Aktiv" : "Inaktiv"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingService(service);
+                                  setServiceForm({
+                                    name: service.name,
+                                    description: service.description || "",
+                                    price: service.price,
+                                    category: service.category,
+                                    isActive: service.isActive,
+                                  });
+                                  setShowServiceDialog(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => {
+                                  if (confirm("Möchten Sie diese Dienstleistung wirklich löschen?")) {
+                                    deleteServiceMutation.mutate({ id: service.id });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Noch keine Dienstleistungen vorhanden
                   </div>
                 )}
               </CardContent>
