@@ -64,6 +64,32 @@ async function startServer() {
     }
   });
   
+  // Video upload endpoint (larger file size limit)
+  const videoUpload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit for videos
+  });
+  
+  app.post("/api/upload/video", videoUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Keine Datei hochgeladen" });
+      }
+      
+      const file = req.file;
+      const timestamp = Date.now();
+      const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const s3Key = `properties/videos/${timestamp}_${sanitizedName}`;
+      
+      const { url } = await storagePut(s3Key, file.buffer, file.mimetype);
+      
+      res.json({ url, key: s3Key });
+    } catch (error) {
+      console.error("Video upload error:", error);
+      res.status(500).json({ error: "Video-Upload fehlgeschlagen" });
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",

@@ -332,3 +332,8 @@
 
 ## Bug-Fix: CRM-Tab im Admin-Dashboard
 - [x] CRM-Tab zum Admin-Dashboard hinzufügen
+
+## Direkter Bild- und Video-Upload
+- [x] Bildupload-Komponente mit S3-Speicherung im Immobilien-Formular
+- [x] Video-Upload-Funktionalität hinzufügen
+- [x] URL-Eingabefelder durch Upload-Komponenten ersetzen

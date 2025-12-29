@@ -1047,6 +1047,7 @@ export default function Admin() {
                       </form>
                     </DialogContent>
                   </Dialog>
+                  </div>
 
                   {/* Property Preview Dialog */}
                   <Dialog open={showPropertyPreview} onOpenChange={setShowPropertyPreview}>
@@ -1174,7 +1175,6 @@ export default function Admin() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent>
