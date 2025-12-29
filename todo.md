@@ -315,3 +315,9 @@
 
 ## Bug-Fix: Wallets-Tab im AdminDirect
 - [x] Wallets-Tab Button im AdminDirect prüfen und korrigieren
+
+## Immobilien-Formular erweitern
+- [x] Video-Verlinkung (YouTube/Vimeo) Feld hinzufügen
+- [x] Hauptbild-URL Feld hinzufügen
+- [x] Zusätzliche Bilder-URLs (Galerie) hinzufügen
+- [x] Ausstattungs-Feld (Amenities) hinzufügen

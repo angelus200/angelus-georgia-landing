@@ -89,8 +89,10 @@ export default function Admin() {
     bathrooms: 1,
     constructionStatus: "planning" as const,
     completionDate: "",
-    mainImage: "/images/modern-apartment.jpg",
-    images: "[]",
+    mainImage: "",
+    images: "",
+    videoUrl: "",
+    amenities: "",
     expectedReturn: "",
     rentalGuarantee: false,
     installmentAvailable: true,
@@ -324,12 +326,31 @@ export default function Admin() {
         data: {
           title: propertyForm.title,
           description: propertyForm.description,
+          location: propertyForm.location,
+          city: propertyForm.city,
           price: propertyForm.price,
+          area: propertyForm.area,
+          bedrooms: propertyForm.bedrooms,
+          bathrooms: propertyForm.bathrooms,
           constructionStatus: propertyForm.constructionStatus,
+          completionDate: propertyForm.completionDate,
+          mainImage: propertyForm.mainImage,
+          images: propertyForm.images,
+          videos: propertyForm.videoUrl ? JSON.stringify([propertyForm.videoUrl]) : undefined,
+          features: propertyForm.amenities ? JSON.stringify(propertyForm.amenities.split(',').map(a => a.trim())) : undefined,
+          expectedReturn: propertyForm.expectedReturn,
+          rentalGuarantee: propertyForm.rentalGuarantee,
+          installmentAvailable: propertyForm.installmentAvailable,
+          minDownPayment: propertyForm.minDownPayment,
+          maxInstallmentMonths: propertyForm.maxInstallmentMonths,
         },
       });
     } else {
-      createPropertyMutation.mutate(propertyForm);
+      createPropertyMutation.mutate({
+        ...propertyForm,
+        videos: propertyForm.videoUrl ? JSON.stringify([propertyForm.videoUrl]) : undefined,
+        features: propertyForm.amenities ? JSON.stringify(propertyForm.amenities.split(',').map(a => a.trim())) : undefined,
+      });
     }
   };
 
@@ -346,8 +367,10 @@ export default function Admin() {
       bathrooms: property.bathrooms,
       constructionStatus: property.constructionStatus,
       completionDate: property.completionDate?.split('T')[0] || "",
-      mainImage: property.mainImage || "/images/modern-apartment.jpg",
-      images: property.images || "[]",
+      mainImage: property.mainImage || "",
+      images: property.images || "",
+      videoUrl: property.videos ? (JSON.parse(property.videos)[0] || "") : "",
+      amenities: property.features ? (Array.isArray(JSON.parse(property.features)) ? JSON.parse(property.features).join(', ') : "") : "",
       expectedReturn: property.expectedReturn || "",
       rentalGuarantee: property.rentalGuarantee || false,
       installmentAvailable: property.installmentAvailable || true,
@@ -369,8 +392,10 @@ export default function Admin() {
       bathrooms: 1,
       constructionStatus: "planning",
       completionDate: "",
-      mainImage: "/images/modern-apartment.jpg",
-      images: "[]",
+      mainImage: "",
+      images: "",
+      videoUrl: "",
+      amenities: "",
       expectedReturn: "",
       rentalGuarantee: false,
       installmentAvailable: true,
@@ -769,13 +794,43 @@ export default function Admin() {
                             />
                           </div>
                           <div className="col-span-2">
-                            <Label>Bild-URL *</Label>
+                            <Label>Hauptbild URL *</Label>
                             <Input
-                              value={propertyForm.images}
-                              onChange={(e) => setPropertyForm({ ...propertyForm, images: e.target.value })}
-                              placeholder="/images/property.jpg"
+                              value={propertyForm.mainImage}
+                              onChange={(e) => setPropertyForm({ ...propertyForm, mainImage: e.target.value })}
+                              placeholder="https://example.com/hauptbild.jpg oder Google Drive Link"
                               required
                             />
+                            <p className="text-xs text-muted-foreground mt-1">URL zum Hauptbild der Immobilie (Google Drive, Dropbox oder direkter Link)</p>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Weitere Bilder (URLs, kommagetrennt)</Label>
+                            <Textarea
+                              value={propertyForm.images}
+                              onChange={(e) => setPropertyForm({ ...propertyForm, images: e.target.value })}
+                              placeholder="https://example.com/bild1.jpg, https://example.com/bild2.jpg"
+                              rows={2}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">Mehrere Bild-URLs mit Komma trennen für die Galerie</p>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Video URL (YouTube/Vimeo)</Label>
+                            <Input
+                              value={propertyForm.videoUrl}
+                              onChange={(e) => setPropertyForm({ ...propertyForm, videoUrl: e.target.value })}
+                              placeholder="https://www.youtube.com/watch?v=... oder https://vimeo.com/..."
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">YouTube oder Vimeo Link zum Immobilien-Video</p>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Ausstattung (kommagetrennt)</Label>
+                            <Textarea
+                              value={propertyForm.amenities}
+                              onChange={(e) => setPropertyForm({ ...propertyForm, amenities: e.target.value })}
+                              placeholder="Pool, Fitness, Concierge, Parkplatz, Meerblick, Balkon"
+                              rows={2}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">Ausstattungsmerkmale mit Komma trennen</p>
                           </div>
                         </div>
                         <div className="flex gap-2">
