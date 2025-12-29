@@ -2151,7 +2151,7 @@ export async function processDeposit(
     bankReference?: string;
     description?: string;
   }
-): Promise<{ success: boolean; qualifiesForBonus: boolean; bonusAmount: number }> {
+): Promise<{ success: boolean; qualifiesForBonus: boolean; bonusAmount: number; newBalance: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -2214,6 +2214,7 @@ export async function processDeposit(
       success: true,
       qualifiesForBonus,
       bonusAmount: qualifiesForBonus ? amount * 0.07 : 0,
+      newBalance,
     };
   } catch (error) {
     console.error("[Database] Failed to process deposit:", error);

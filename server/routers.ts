@@ -84,7 +84,7 @@ import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
-import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail } from "./email";
+import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail, sendDepositConfirmationEmail, sendDepositRejectionEmail, sendInterestCreditEmail } from "./email";
 import crypto from "crypto";
 
 // Helper function to parse CSV line (handles quoted values)
@@ -1233,6 +1233,18 @@ export const appRouter = router({
           processedAt: new Date(),
         });
 
+        // Send email notification
+        try {
+          await sendDepositConfirmationEmail(
+            request.userId,
+            parseFloat(request.amount),
+            request.method,
+            result.newBalance
+          );
+        } catch (emailError) {
+          console.error("Failed to send deposit confirmation email:", emailError);
+        }
+
         return result;
       }),
 
@@ -1247,11 +1259,27 @@ export const appRouter = router({
           throw new Error("Admin access required");
         }
 
+        const request = await getDepositRequestById(input.requestId);
+        if (!request) {
+          throw new Error("Deposit request not found");
+        }
+
         await updateDepositRequestStatus(input.requestId, "cancelled", {
           adminNotes: input.reason,
           processedBy: ctx.user.id,
           processedAt: new Date(),
         });
+
+        // Send email notification
+        try {
+          await sendDepositRejectionEmail(
+            request.userId,
+            parseFloat(request.amount),
+            input.reason
+          );
+        } catch (emailError) {
+          console.error("Failed to send deposit rejection email:", emailError);
+        }
 
         return { success: true };
       }),

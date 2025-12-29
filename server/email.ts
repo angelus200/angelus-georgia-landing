@@ -400,3 +400,227 @@ export async function sendAdminOrderNotification(
     return { success: false, error };
   }
 }
+
+// ==================== WALLET EMAIL FUNCTIONS ====================
+
+import { getDb } from "./db";
+import { users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+
+/**
+ * Get user email by user ID
+ */
+async function getUserEmailById(userId: number): Promise<{ email: string; name: string } | null> {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const user = await db.select({
+    email: users.email,
+    firstName: users.firstName,
+    lastName: users.lastName,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+  
+  if (user.length === 0 || !user[0].email) return null;
+  
+  return {
+    email: user[0].email,
+    name: `${user[0].firstName || ''} ${user[0].lastName || ''}`.trim() || 'Kunde',
+  };
+}
+
+/**
+ * Send email when a deposit is confirmed
+ */
+export async function sendDepositConfirmationEmail(
+  userId: number,
+  amount: number,
+  method: string,
+  newBalance: number
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const userData = await getUserEmailById(userId);
+    if (!userData) {
+      console.error('User not found for deposit confirmation email');
+      return { success: false, error: 'User not found' };
+    }
+
+    const methodLabel = method === 'bank_transfer' ? 'Banküberweisung' :
+                        method === 'crypto_btc' ? 'Bitcoin' :
+                        method === 'crypto_eth' ? 'Ethereum' :
+                        method === 'crypto_usdt' ? 'USDT' : 'Krypto';
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
+      to: userData.email,
+      subject: 'Einzahlung bestätigt - Angelus Management Georgia',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #B8860B;">Einzahlung bestätigt</h1>
+          <p>Guten Tag ${userData.name},</p>
+          <p>Ihre Einzahlung wurde erfolgreich bestätigt und Ihrem Wallet gutgeschrieben.</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 8px 0;"><strong>Betrag:</strong></td>
+                <td style="text-align: right; color: #2e7d32; font-weight: bold;">+${amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;"><strong>Zahlungsmethode:</strong></td>
+                <td style="text-align: right;">${methodLabel}</td>
+              </tr>
+              <tr style="border-top: 1px solid #ddd;">
+                <td style="padding: 12px 0;"><strong>Neues Guthaben:</strong></td>
+                <td style="text-align: right; font-size: 18px; font-weight: bold; color: #B8860B;">${newBalance.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p>Sie können Ihr Guthaben jetzt für Immobilienkäufe und Services verwenden.</p>
+          
+          <p style="margin-top: 30px;">
+            <a href="${process.env.VITE_APP_URL || 'http://localhost:3000'}/wallet" 
+               style="background-color: #B8860B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Zum Wallet
+            </a>
+          </p>
+          
+          <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br>Ihr Angelus Management Team</p>
+        </div>
+      `,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending deposit confirmation email:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Send email when interest is credited to bonus balance
+ */
+export async function sendInterestCreditEmail(
+  userId: number,
+  interestAmount: number,
+  newBonusBalance: number
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const userData = await getUserEmailById(userId);
+    if (!userData) {
+      console.error('User not found for interest credit email');
+      return { success: false, error: 'User not found' };
+    }
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
+      to: userData.email,
+      subject: 'Zinsgutschrift - Angelus Management Georgia',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #B8860B;">Zinsgutschrift</h1>
+          <p>Guten Tag ${userData.name},</p>
+          <p>Ihnen wurden Zinsen auf Ihr Bonus-Guthaben gutgeschrieben.</p>
+          
+          <div style="background-color: #fff8e1; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #B8860B;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 8px 0;"><strong>Zinsgutschrift:</strong></td>
+                <td style="text-align: right; color: #2e7d32; font-weight: bold;">+${interestAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;"><strong>Zinssatz:</strong></td>
+                <td style="text-align: right;">7% p.a.</td>
+              </tr>
+              <tr style="border-top: 1px solid #B8860B;">
+                <td style="padding: 12px 0;"><strong>Neues Bonus-Guthaben:</strong></td>
+                <td style="text-align: right; font-size: 18px; font-weight: bold; color: #B8860B;">${newBonusBalance.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p style="color: #666; font-size: 14px;">
+            <strong>Hinweis:</strong> Das Bonus-Guthaben kann für Einkäufe bei Angelus Management Georgia verwendet werden.
+            Es ist nicht auszahlbar, bietet Ihnen aber einen wertvollen Rabatt auf Ihre Investitionen.
+          </p>
+          
+          <p style="margin-top: 30px;">
+            <a href="${process.env.VITE_APP_URL || 'http://localhost:3000'}/wallet" 
+               style="background-color: #B8860B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Zum Wallet
+            </a>
+          </p>
+          
+          <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br>Ihr Angelus Management Team</p>
+        </div>
+      `,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending interest credit email:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Send email when a deposit request is rejected
+ */
+export async function sendDepositRejectionEmail(
+  userId: number,
+  amount: number,
+  reason: string
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const userData = await getUserEmailById(userId);
+    if (!userData) {
+      console.error('User not found for deposit rejection email');
+      return { success: false, error: 'User not found' };
+    }
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
+      to: userData.email,
+      subject: 'Einzahlung nicht bestätigt - Angelus Management Georgia',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #B8860B;">Einzahlung nicht bestätigt</h1>
+          <p>Guten Tag ${userData.name},</p>
+          <p>Leider konnte Ihre Einzahlungsanfrage nicht bestätigt werden.</p>
+          
+          <div style="background-color: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 8px 0;"><strong>Betrag:</strong></td>
+                <td style="text-align: right;">${amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;"><strong>Grund:</strong></td>
+                <td style="text-align: right;">${reason}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p>Bitte kontaktieren Sie uns bei Fragen oder versuchen Sie es erneut.</p>
+          
+          <p style="margin-top: 30px;">
+            <a href="${process.env.VITE_APP_URL || 'http://localhost:3000'}/wallet" 
+               style="background-color: #B8860B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Neue Einzahlung
+            </a>
+          </p>
+          
+          <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br>Ihr Angelus Management Team</p>
+        </div>
+      `,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending deposit rejection email:', error);
+    return { success: false, error };
+  }
+}

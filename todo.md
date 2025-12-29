@@ -277,4 +277,21 @@
 - [x] Bonus-Zinssystem (7% bei Ersteinzahlung ab 10.000€) implementieren
 - [x] Wallet-Integration in Checkout-Prozess
 - [x] Wallet-Link im Header für eingeloggte User
-- [ ] Admin-Bereich für Wallet-Verwaltung (Einzahlungen bestätigen)
+- [x] Admin-Bereich für Wallet-Verwaltung (Einzahlungen bestätigen)
+
+## Admin-Wallet-Verwaltung
+- [x] Wallet-Tab im Admin-Dashboard hinzufügen
+- [x] Übersicht aller Kunden-Wallets anzeigen
+- [x] Einzahlungsanfragen auflisten und bestätigen/ablehnen
+- [x] Wallet-Guthaben manuell anpassen können
+
+## Automatische Zinsberechnung
+- [x] Cron-Job für tägliche Zinsberechnung einrichten
+- [x] 7% jährliche Zinsen für qualifizierte Wallets berechnen
+- [x] Zinsen als Bonus-Guthaben gutschreiben
+- [x] Zinsberechnungs-Historie speichern
+
+## E-Mail-Benachrichtigungen für Wallet
+- [x] E-Mail bei Einzahlungsbestätigung senden
+- [x] E-Mail bei Zinsgutschrift senden
+- [x] E-Mail-Templates für Wallet-Aktivitäten erstellen

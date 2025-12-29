@@ -47,7 +47,11 @@ import {
   Plus,
   Edit,
   Package,
-  CreditCard
+  CreditCard,
+  Wallet,
+  Check,
+  X,
+  TrendingUp
 } from "lucide-react";
 
 type ContactStatus = "new" | "contacted" | "closed";
@@ -206,6 +210,73 @@ export default function Admin() {
       refetchServices();
     },
     onError: (error) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  // Wallets
+  const { data: allWallets, isLoading: walletsLoading, refetch: refetchWallets } = trpc.adminWallet.getAllWallets.useQuery(
+    undefined,
+    { enabled: !!user && user.role === "admin" }
+  );
+
+  const { data: depositRequests, isLoading: depositsLoading, refetch: refetchDeposits } = trpc.adminWallet.getAllDepositRequests.useQuery(
+    undefined,
+    { enabled: !!user && user.role === "admin" }
+  );
+
+  const [walletAdjustAmount, setWalletAdjustAmount] = useState("");
+  const [walletAdjustReason, setWalletAdjustReason] = useState("");
+  const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
+  const [showWalletAdjustDialog, setShowWalletAdjustDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [selectedDepositId, setSelectedDepositId] = useState<number | null>(null);
+
+  const approveDepositMutation = trpc.adminWallet.approveDeposit.useMutation({
+    onSuccess: () => {
+      toast.success("Einzahlung bestätigt");
+      refetchDeposits();
+      refetchWallets();
+    },
+    onError: (error: any) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  const rejectDepositMutation = trpc.adminWallet.rejectDeposit.useMutation({
+    onSuccess: () => {
+      toast.success("Einzahlung abgelehnt");
+      refetchDeposits();
+      setShowRejectDialog(false);
+      setRejectReason("");
+      setSelectedDepositId(null);
+    },
+    onError: (error: any) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  const manualDepositMutation = trpc.adminWallet.manualDeposit.useMutation({
+    onSuccess: () => {
+      toast.success("Einzahlung gutgeschrieben");
+      refetchWallets();
+      setShowWalletAdjustDialog(false);
+      setWalletAdjustAmount("");
+      setWalletAdjustReason("");
+      setSelectedWalletId(null);
+    },
+    onError: (error: any) => {
+      toast.error(`Fehler: ${error.message}`);
+    },
+  });
+
+  const calculateAllInterestMutation = trpc.adminWallet.calculateAllInterest.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Zinsen berechnet: ${data.credited} von ${data.walletsProcessed} Wallets, Gesamt: ${data.totalAmount.toFixed(2)}€`);
+      refetchWallets();
+    },
+    onError: (error: any) => {
       toast.error(`Fehler: ${error.message}`);
     },
   });
@@ -377,11 +448,12 @@ export default function Admin() {
       {/* Main Content */}
       <main className="container py-8">
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="contacts">Kontaktanfragen</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
             <TabsTrigger value="services">Dienstleistungen</TabsTrigger>
             <TabsTrigger value="bookings">Buchungen</TabsTrigger>
+            <TabsTrigger value="wallets">Wallets</TabsTrigger>
           </TabsList>
 
           {/* Contacts Tab */}
@@ -1087,6 +1159,299 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Wallets Tab */}
+          <TabsContent value="wallets" className="space-y-6">
+            {/* Pending Deposits Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="h-5 w-5 text-[#C4A052]" />
+                      Einzahlungsanfragen
+                    </CardTitle>
+                    <CardDescription>
+                      Offene Einzahlungen prüfen und bestätigen
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => calculateAllInterestMutation.mutate()}
+                    disabled={calculateAllInterestMutation.isPending}
+                    className="bg-[#C4A052] hover:bg-[#B39142]"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Zinsen berechnen
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {depositsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#C4A052]" />
+                  </div>
+                ) : depositRequests && depositRequests.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Benutzer</TableHead>
+                        <TableHead>Betrag</TableHead>
+                        <TableHead>Methode</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Datum</TableHead>
+                        <TableHead>Aktionen</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {depositRequests.map((request: any) => (
+                        <TableRow key={request.id}>
+                          <TableCell>#{request.id}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="font-medium">User #{request.userId}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {parseFloat(request.amount).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {request.method === "bank_transfer" ? "Bank" : 
+                               request.method === "crypto_btc" ? "Bitcoin" :
+                               request.method === "crypto_eth" ? "Ethereum" :
+                               request.method === "crypto_usdt" ? "USDT" : request.method}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              request.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                              request.status === "completed" ? "bg-green-100 text-green-800" :
+                              request.status === "cancelled" ? "bg-red-100 text-red-800" :
+                              "bg-gray-100 text-gray-800"
+                            }>
+                              {request.status === "pending" ? "Ausstehend" :
+                               request.status === "completed" ? "Abgeschlossen" :
+                               request.status === "cancelled" ? "Abgelehnt" : request.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(request.createdAt).toLocaleDateString("de-DE")}
+                          </TableCell>
+                          <TableCell>
+                            {request.status === "pending" && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => approveDepositMutation.mutate({ requestId: request.id })}
+                                  disabled={approveDepositMutation.isPending}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => {
+                                    setSelectedDepositId(request.id);
+                                    setShowRejectDialog(true);
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Keine Einzahlungsanfragen vorhanden
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* All Wallets Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Alle Kunden-Wallets</CardTitle>
+                <CardDescription>
+                  Übersicht aller Wallet-Guthaben
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {walletsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#C4A052]" />
+                  </div>
+                ) : allWallets && allWallets.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Wallet ID</TableHead>
+                        <TableHead>Benutzer</TableHead>
+                        <TableHead>Guthaben</TableHead>
+                        <TableHead>Bonus</TableHead>
+                        <TableHead>Gesamt eingezahlt</TableHead>
+                        <TableHead>7% Bonus</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Aktionen</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allWallets.map((wallet: any) => (
+                        <TableRow key={wallet.id}>
+                          <TableCell>#{wallet.id}</TableCell>
+                          <TableCell>User #{wallet.userId}</TableCell>
+                          <TableCell className="font-medium">
+                            {parseFloat(wallet.balance).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                          </TableCell>
+                          <TableCell className="text-amber-600 font-medium">
+                            {parseFloat(wallet.bonusBalance).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                          </TableCell>
+                          <TableCell>
+                            {parseFloat(wallet.totalDeposited).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                          </TableCell>
+                          <TableCell>
+                            {wallet.qualifiesForInterest ? (
+                              <Badge className="bg-green-100 text-green-800">Aktiv</Badge>
+                            ) : (
+                              <Badge variant="outline">Nicht qualifiziert</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              wallet.status === "active" ? "bg-green-100 text-green-800" :
+                              wallet.status === "frozen" ? "bg-blue-100 text-blue-800" :
+                              "bg-red-100 text-red-800"
+                            }>
+                              {wallet.status === "active" ? "Aktiv" :
+                               wallet.status === "frozen" ? "Eingefroren" : "Geschlossen"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedWalletId(wallet.id);
+                                setShowWalletAdjustDialog(true);
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Einzahlung
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Noch keine Wallets vorhanden
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Reject Deposit Dialog */}
+            <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Einzahlung ablehnen</DialogTitle>
+                  <DialogDescription>
+                    Geben Sie einen Grund für die Ablehnung an.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Grund</Label>
+                    <Textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Grund für die Ablehnung..."
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+                      Abbrechen
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        if (selectedDepositId && rejectReason) {
+                          rejectDepositMutation.mutate({
+                            requestId: selectedDepositId,
+                            reason: rejectReason,
+                          });
+                        }
+                      }}
+                      disabled={!rejectReason || rejectDepositMutation.isPending}
+                    >
+                      Ablehnen
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Manual Deposit Dialog */}
+            <Dialog open={showWalletAdjustDialog} onOpenChange={setShowWalletAdjustDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Manuelle Einzahlung</DialogTitle>
+                  <DialogDescription>
+                    Guthaben manuell zum Wallet hinzufügen.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Betrag (€)</Label>
+                    <Input
+                      type="number"
+                      value={walletAdjustAmount}
+                      onChange={(e) => setWalletAdjustAmount(e.target.value)}
+                      placeholder="1000"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Beschreibung</Label>
+                    <Textarea
+                      value={walletAdjustReason}
+                      onChange={(e) => setWalletAdjustReason(e.target.value)}
+                      placeholder="Grund für die Einzahlung..."
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setShowWalletAdjustDialog(false)}>
+                      Abbrechen
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const wallet = allWallets?.find((w: any) => w.id === selectedWalletId);
+                        if (wallet && walletAdjustAmount) {
+                          manualDepositMutation.mutate({
+                            userId: wallet.userId,
+                            amount: parseFloat(walletAdjustAmount),
+                            method: "bank_transfer",
+                            description: walletAdjustReason || "Manuelle Einzahlung durch Admin",
+                          });
+                        }
+                      }}
+                      disabled={!walletAdjustAmount || manualDepositMutation.isPending}
+                      className="bg-[#C4A052] hover:bg-[#B39142]"
+                    >
+                      Einzahlen
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </main>
