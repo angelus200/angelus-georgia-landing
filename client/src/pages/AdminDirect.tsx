@@ -803,6 +803,16 @@ function AdminDirectDashboard() {
           >
             🎥 Videos
           </button>
+          <button
+            onClick={() => setActiveTab("wallets")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "wallets" 
+                ? "bg-white text-gray-900 shadow-sm" 
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            💰 Wallets
+          </button>
           <Link
             href="/crm"
             className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-[#C4A052] text-white hover:bg-[#B39142]"
@@ -1032,6 +1042,11 @@ function AdminDirectDashboard() {
               {/* Videos Tab */}
               {activeTab === "videos" && (
                 <VideosTab />
+              )}
+
+              {/* Wallets Tab */}
+              {activeTab === "wallets" && (
+                <WalletsTab />
               )}
             </>
           )}
@@ -2187,6 +2202,412 @@ function VideoFormModal({
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+
+// Wallets Tab Component
+function WalletsTab() {
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [depositRequests, setDepositRequests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeSubTab, setActiveSubTab] = useState("wallets");
+  const [showManualDepositModal, setShowManualDepositModal] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<any>(null);
+  const [manualDepositAmount, setManualDepositAmount] = useState("");
+  const [manualDepositNote, setManualDepositNote] = useState("");
+
+  const loadData = async () => {
+    try {
+      // Load all wallets
+      const walletsRes = await fetch("/api/trpc/adminWallet.getAllWallets?input={}");
+      if (walletsRes.ok) {
+        const data = await walletsRes.json();
+        setWallets(data.result?.data?.json || data.result?.data || []);
+      }
+
+      // Load deposit requests
+      const depositsRes = await fetch("/api/trpc/adminWallet.getAllDepositRequests?input={}");
+      if (depositsRes.ok) {
+        const data = await depositsRes.json();
+        setDepositRequests(data.result?.data?.json || data.result?.data || []);
+      }
+    } catch (error) {
+      console.error("Fehler beim Laden:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleApproveDeposit = async (requestId: number) => {
+    if (!confirm("Einzahlung bestätigen?")) return;
+    
+    try {
+      const res = await fetch("/api/trpc/adminWallet.approveDeposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { requestId } }),
+      });
+      
+      if (res.ok) {
+        alert("Einzahlung bestätigt!");
+        loadData();
+      } else {
+        const error = await res.json();
+        alert("Fehler: " + (error.error?.message || "Unbekannter Fehler"));
+      }
+    } catch (error) {
+      console.error("Fehler:", error);
+      alert("Fehler beim Bestätigen");
+    }
+  };
+
+  const handleRejectDeposit = async (requestId: number) => {
+    const reason = prompt("Grund für Ablehnung:");
+    if (!reason) return;
+    
+    try {
+      const res = await fetch("/api/trpc/adminWallet.rejectDeposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { requestId, reason } }),
+      });
+      
+      if (res.ok) {
+        alert("Einzahlung abgelehnt!");
+        loadData();
+      } else {
+        const error = await res.json();
+        alert("Fehler: " + (error.error?.message || "Unbekannter Fehler"));
+      }
+    } catch (error) {
+      console.error("Fehler:", error);
+      alert("Fehler beim Ablehnen");
+    }
+  };
+
+  const handleManualDeposit = async () => {
+    if (!selectedWallet || !manualDepositAmount) return;
+    
+    const amount = parseFloat(manualDepositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Bitte gültigen Betrag eingeben");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/trpc/adminWallet.manualDeposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          json: { 
+            walletId: selectedWallet.id, 
+            amount,
+            notes: manualDepositNote || "Manuelle Einzahlung durch Admin"
+          } 
+        }),
+      });
+      
+      if (res.ok) {
+        alert("Einzahlung erfolgreich!");
+        setShowManualDepositModal(false);
+        setSelectedWallet(null);
+        setManualDepositAmount("");
+        setManualDepositNote("");
+        loadData();
+      } else {
+        const error = await res.json();
+        alert("Fehler: " + (error.error?.message || "Unbekannter Fehler"));
+      }
+    } catch (error) {
+      console.error("Fehler:", error);
+      alert("Fehler bei der Einzahlung");
+    }
+  };
+
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    return num.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      pending: "bg-yellow-100 text-yellow-800",
+      awaiting_payment: "bg-blue-100 text-blue-800",
+      payment_received: "bg-purple-100 text-purple-800",
+      completed: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800",
+    };
+    const labels: Record<string, string> = {
+      pending: "Ausstehend",
+      awaiting_payment: "Warte auf Zahlung",
+      payment_received: "Zahlung eingegangen",
+      completed: "Abgeschlossen",
+      cancelled: "Abgelehnt",
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || "bg-gray-100 text-gray-800"}`}>
+        {labels[status] || status}
+      </span>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4A052] mx-auto mb-4"></div>
+        <p className="text-gray-600">Wallet-Daten werden geladen...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Wallet-Verwaltung</h2>
+          <p className="text-sm text-gray-600">Verwalten Sie Kunden-Wallets und Einzahlungen</p>
+        </div>
+      </div>
+
+      {/* Sub-Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <button
+          onClick={() => setActiveSubTab("wallets")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeSubTab === "wallets"
+              ? "border-[#C4A052] text-[#C4A052]"
+              : "border-transparent text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          Alle Wallets ({wallets.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab("deposits")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeSubTab === "deposits"
+              ? "border-[#C4A052] text-[#C4A052]"
+              : "border-transparent text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          Einzahlungsanfragen ({depositRequests.filter(d => d.status === "pending" || d.status === "payment_received").length})
+        </button>
+      </div>
+
+      {/* Wallets List */}
+      {activeSubTab === "wallets" && (
+        <div className="space-y-4">
+          {wallets.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">Keine Wallets vorhanden</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kunde</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guthaben</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bonus</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gesamt eingezahlt</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zinsberechtigt</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {wallets.map((wallet) => (
+                    <tr key={wallet.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium text-gray-900">{wallet.userName || `User #${wallet.userId}`}</p>
+                          <p className="text-sm text-gray-500">{wallet.userEmail || "-"}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {formatCurrency(wallet.balance)}
+                      </td>
+                      <td className="px-4 py-3 text-[#C4A052] font-medium">
+                        {formatCurrency(wallet.bonusBalance)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatCurrency(wallet.totalDeposited)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {wallet.qualifiesForInterest ? (
+                          <span className="text-green-600">✓ Ja (7%)</span>
+                        ) : (
+                          <span className="text-gray-400">✗ Nein</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          wallet.status === "active" ? "bg-green-100 text-green-800" :
+                          wallet.status === "frozen" ? "bg-blue-100 text-blue-800" :
+                          "bg-red-100 text-red-800"
+                        }`}>
+                          {wallet.status === "active" ? "Aktiv" : 
+                           wallet.status === "frozen" ? "Eingefroren" : "Geschlossen"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => {
+                            setSelectedWallet(wallet);
+                            setShowManualDepositModal(true);
+                          }}
+                          className="text-[#C4A052] hover:text-[#B39142] text-sm font-medium"
+                        >
+                          + Einzahlung
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Deposit Requests */}
+      {activeSubTab === "deposits" && (
+        <div className="space-y-4">
+          {depositRequests.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">Keine Einzahlungsanfragen vorhanden</p>
+          ) : (
+            <div className="space-y-4">
+              {depositRequests.map((request) => (
+                <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-semibold text-lg">{formatCurrency(request.amount)}</span>
+                        {getStatusBadge(request.status)}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Kunde:</span>{" "}
+                          <span className="text-gray-900">{request.userName || `User #${request.userId}`}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Methode:</span>{" "}
+                          <span className="text-gray-900">
+                            {request.method === "bank_transfer" ? "Banküberweisung" :
+                             request.method === "crypto_btc" ? "Bitcoin" :
+                             request.method === "crypto_eth" ? "Ethereum" :
+                             request.method === "crypto_usdt" ? "USDT" : request.method}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Erstellt:</span>{" "}
+                          <span className="text-gray-900">{formatDate(request.createdAt)}</span>
+                        </div>
+                        {request.bankReference && (
+                          <div>
+                            <span className="text-gray-500">Referenz:</span>{" "}
+                            <span className="text-gray-900">{request.bankReference}</span>
+                          </div>
+                        )}
+                        {request.txHash && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500">TX Hash:</span>{" "}
+                            <span className="text-gray-900 font-mono text-xs">{request.txHash}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {(request.status === "pending" || request.status === "payment_received") && (
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleApproveDeposit(request.id)}
+                          className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
+                        >
+                          Bestätigen
+                        </button>
+                        <button
+                          onClick={() => handleRejectDeposit(request.id)}
+                          className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
+                        >
+                          Ablehnen
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Manual Deposit Modal */}
+      {showManualDepositModal && selectedWallet && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Manuelle Einzahlung</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Wallet von: <strong>{selectedWallet.userName || `User #${selectedWallet.userId}`}</strong>
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Betrag (€)</label>
+                <input
+                  type="number"
+                  value={manualDepositAmount}
+                  onChange={(e) => setManualDepositAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notiz (optional)</label>
+                <input
+                  type="text"
+                  value={manualDepositNote}
+                  onChange={(e) => setManualDepositNote(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  placeholder="z.B. Bareinzahlung"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowManualDepositModal(false);
+                  setSelectedWallet(null);
+                  setManualDepositAmount("");
+                  setManualDepositNote("");
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleManualDeposit}
+                className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142]"
+              >
+                Einzahlen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

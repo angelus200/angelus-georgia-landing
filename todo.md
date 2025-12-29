@@ -295,3 +295,19 @@
 - [x] E-Mail bei Einzahlungsbestätigung senden
 - [x] E-Mail bei Zinsgutschrift senden
 - [x] E-Mail-Templates für Wallet-Aktivitäten erstellen
+
+## AdminDirect Wallets-Tab
+- [x] Wallets-Tab zu AdminDirect.tsx hinzufügen
+- [x] Alle Kunden-Wallets anzeigen
+- [x] Einzahlungsanfragen anzeigen und verwalten
+
+## Investor Wallet-Ansicht
+- [x] Wallet-Sektion im InvestorDashboard hinzufügen
+- [x] Guthaben und Bonus-Guthaben anzeigen
+- [x] Einzahlungsmöglichkeit für Investoren
+
+## Stripe-Zahlungsintegration
+- [ ] Stripe Feature mit webdev_add_feature hinzufügen
+- [ ] Stripe für Produkte und Services konfigurieren
+- [ ] Checkout-Prozess mit Stripe verbinden
+- [ ] Abonnement-Funktionalität implementieren

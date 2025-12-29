@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Package, CreditCard, FileText, LogOut, User } from "lucide-react";
+import { Building2, Package, CreditCard, FileText, LogOut, User, Wallet } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -14,6 +14,7 @@ export default function InvestorDashboard() {
   // Real backend queries
   const { data: bookings, isLoading: bookingsLoading } = trpc.bookings.getMyBookings.useQuery();
   const { data: payments, isLoading: paymentsLoading } = trpc.payments.getMyPayments.useQuery();
+  const { data: walletData, isLoading: walletLoading } = trpc.wallet.get.useQuery();
 
   if (!user) {
     setLocation("/login");
@@ -65,6 +66,40 @@ export default function InvestorDashboard() {
             Verwalten Sie Ihre Immobilieninvestitionen und Service-Pakete
           </p>
         </div>
+
+        {/* Wallet Overview Card */}
+        <Card className="mb-8 bg-gradient-to-r from-[#C4A052]/10 to-[#C4A052]/5 border-[#C4A052]/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-[#C4A052]/20 rounded-full">
+                  <Wallet className="h-8 w-8 text-[#C4A052]" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Ihr Wallet-Guthaben</p>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-bold text-foreground">
+                      {walletLoading ? "..." : parseFloat(walletData?.balance || "0").toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                    {walletData?.bonusBalance && parseFloat(walletData.bonusBalance) > 0 && (
+                      <span className="text-lg text-[#C4A052] font-medium">
+                        + {parseFloat(walletData.bonusBalance).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} Bonus
+                      </span>
+                    )}
+                  </div>
+                  {walletData?.qualifiesForInterest && (
+                    <p className="text-xs text-green-600 mt-1">✓ 7% jährliche Verzinsung aktiv</p>
+                  )}
+                </div>
+              </div>
+              <Link href="/wallet">
+                <Button className="bg-[#C4A052] hover:bg-[#B39142] text-white">
+                  Zum Wallet
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -125,11 +160,12 @@ export default function InvestorDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Übersicht</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
             <TabsTrigger value="packages">Service-Pakete</TabsTrigger>
             <TabsTrigger value="payments">Zahlungen</TabsTrigger>
+            <TabsTrigger value="wallet">Wallet</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -331,6 +367,71 @@ export default function InvestorDashboard() {
                     <p className="text-muted-foreground">
                       Keine Zahlungen vorhanden
                     </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="wallet">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-[#C4A052]" />
+                  Mein Wallet
+                </CardTitle>
+                <CardDescription>
+                  Verwalten Sie Ihr Guthaben und sehen Sie Ihre Transaktionen
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {walletLoading ? (
+                  <p className="text-muted-foreground">Lade Wallet-Daten...</p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Balance Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">Verfügbares Guthaben</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {parseFloat(walletData?.balance || "0").toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-[#C4A052]/10 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Bonus-Guthaben (7% Zinsen)</p>
+                        <p className="text-2xl font-bold text-[#C4A052]">
+                          {parseFloat(walletData?.bonusBalance || "0").toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">Gesamt eingezahlt</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {parseFloat(walletData?.totalDeposited || "0").toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Interest Info */}
+                    {walletData?.qualifiesForInterest ? (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-800 font-medium">✓ Sie erhalten 7% jährliche Verzinsung auf Ihr Guthaben</p>
+                        <p className="text-sm text-green-600 mt-1">Die Zinsen werden täglich berechnet und als Bonus-Guthaben gutgeschrieben.</p>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-amber-800 font-medium">Tipp: Zahlen Sie mindestens 10.000€ ein und erhalten Sie 7% jährliche Verzinsung!</p>
+                        <p className="text-sm text-amber-600 mt-1">Die Zinsen werden als Bonus-Guthaben gutgeschrieben, das Sie für Einkäufe verwenden können.</p>
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <div className="flex justify-center">
+                      <Link href="/wallet">
+                        <Button className="bg-[#C4A052] hover:bg-[#B39142] text-white">
+                          Zur Wallet-Übersicht & Einzahlung
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 )}
               </CardContent>
