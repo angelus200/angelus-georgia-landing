@@ -321,3 +321,14 @@
 - [x] Hauptbild-URL Feld hinzufügen
 - [x] Zusätzliche Bilder-URLs (Galerie) hinzufügen
 - [x] Ausstattungs-Feld (Amenities) hinzufügen
+
+## Erweiterte Immobilien-Verwaltung
+- [x] Drag & Drop Bildupload-Komponente erstellen
+- [x] Bildvorschau nach Upload anzeigen
+- [x] Bilder zu S3 hochladen und URLs speichern
+- [x] Immobilien-Vorschau im Formular implementieren
+- [x] CSV-Bulk-Import für Immobilien erstellen
+- [x] CSV-Template zum Download bereitstellen
+
+## Bug-Fix: CRM-Tab im Admin-Dashboard
+- [x] CRM-Tab zum Admin-Dashboard hinzufügen

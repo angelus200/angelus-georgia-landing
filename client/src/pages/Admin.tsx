@@ -36,6 +36,7 @@ import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { ImageUpload } from "@/components/ImageUpload";
 import { 
   Loader2, 
   Mail, 
@@ -51,7 +52,10 @@ import {
   Wallet,
   Check,
   X,
-  TrendingUp
+  TrendingUp,
+  BarChart3,
+  Eye,
+  FileSpreadsheet
 } from "lucide-react";
 
 type ContactStatus = "new" | "contacted" | "closed";
@@ -65,6 +69,10 @@ export default function Admin() {
   const [selectedInquiry, setSelectedInquiry] = useState<number | null>(null);
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
+  const [showPropertyPreview, setShowPropertyPreview] = useState(false);
+  const [showCSVImport, setShowCSVImport] = useState(false);
+  const [csvImportData, setCsvImportData] = useState<any[]>([]);
+  const [csvImportError, setCsvImportError] = useState<string | null>(null);
   
   // Services State
   const [showServiceDialog, setShowServiceDialog] = useState(false);
@@ -473,12 +481,16 @@ export default function Admin() {
       {/* Main Content */}
       <main className="container py-8">
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="contacts">Kontaktanfragen</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
             <TabsTrigger value="services">Dienstleistungen</TabsTrigger>
             <TabsTrigger value="bookings">Buchungen</TabsTrigger>
             <TabsTrigger value="wallets">Wallets</TabsTrigger>
+            <TabsTrigger value="crm" className="bg-primary/10 text-primary">
+              <BarChart3 className="h-4 w-4 mr-1" />
+              CRM
+            </TabsTrigger>
           </TabsList>
 
           {/* Contacts Tab */}
@@ -640,16 +652,189 @@ export default function Admin() {
                       Immobilien hinzufügen, bearbeiten und verwalten
                     </CardDescription>
                   </div>
-                  <Dialog open={showPropertyDialog} onOpenChange={(open) => {
-                    setShowPropertyDialog(open);
-                    if (!open) resetPropertyForm();
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button className="bg-gold hover:bg-gold/90">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Neue Immobilie
-                      </Button>
-                    </DialogTrigger>
+                  <div className="flex gap-2">
+                    {/* CSV Import Button */}
+                    <Dialog open={showCSVImport} onOpenChange={setShowCSVImport}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline">
+                          <FileSpreadsheet className="h-4 w-4 mr-2" />
+                          CSV Import
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Immobilien aus CSV importieren</DialogTitle>
+                          <DialogDescription>
+                            Laden Sie eine CSV-Datei hoch, um mehrere Immobilien gleichzeitig zu importieren
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          {/* CSV Template Download */}
+                          <div className="p-4 bg-muted/50 rounded-lg">
+                            <h4 className="font-semibold mb-2">CSV-Vorlage herunterladen</h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Laden Sie die Vorlage herunter und füllen Sie sie mit Ihren Immobiliendaten aus.
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const headers = 'title;description;location;city;price;area;bedrooms;bathrooms;constructionStatus;completionDate;mainImage;images;videoUrl;amenities;expectedReturn;minDownPayment;maxInstallmentMonths';
+                                const example = 'Luxus Apartment Batumi;Modernes Apartment mit Meerblick;Batumi Boulevard;Batumi;150000;85;2;1;construction;2025-06-30;https://example.com/main.jpg;https://example.com/img1.jpg,https://example.com/img2.jpg;https://youtube.com/watch?v=xxx;Pool,Fitness,Concierge;12;30;36';
+                                const csv = headers + '\n' + example;
+                                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = 'immobilien_vorlage.csv';
+                                link.click();
+                              }}
+                            >
+                              <FileSpreadsheet className="h-4 w-4 mr-2" />
+                              Vorlage herunterladen
+                            </Button>
+                          </div>
+
+                          {/* CSV Upload */}
+                          <div className="p-4 border-2 border-dashed rounded-lg">
+                            <input
+                              type="file"
+                              accept=".csv"
+                              className="hidden"
+                              id="csv-upload"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setCsvImportError(null);
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  try {
+                                    const text = event.target?.result as string;
+                                    const lines = text.split('\n').filter(line => line.trim());
+                                    if (lines.length < 2) {
+                                      setCsvImportError('Die CSV-Datei muss mindestens eine Kopfzeile und eine Datenzeile enthalten');
+                                      return;
+                                    }
+                                    const headers = lines[0].split(';').map(h => h.trim());
+                                    const data = lines.slice(1).map(line => {
+                                      const values = line.split(';');
+                                      const obj: any = {};
+                                      headers.forEach((header, i) => {
+                                        obj[header] = values[i]?.trim() || '';
+                                      });
+                                      return obj;
+                                    });
+                                    setCsvImportData(data);
+                                  } catch (err) {
+                                    setCsvImportError('Fehler beim Lesen der CSV-Datei');
+                                  }
+                                };
+                                reader.readAsText(file);
+                              }}
+                            />
+                            <label htmlFor="csv-upload" className="cursor-pointer block text-center">
+                              <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                              <p className="font-medium">CSV-Datei hochladen</p>
+                              <p className="text-sm text-muted-foreground">Klicken Sie hier oder ziehen Sie eine Datei hierher</p>
+                            </label>
+                          </div>
+
+                          {csvImportError && (
+                            <div className="p-3 bg-red-500/10 text-red-500 rounded-lg text-sm">
+                              {csvImportError}
+                            </div>
+                          )}
+
+                          {/* Preview */}
+                          {csvImportData.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold mb-2">Vorschau ({csvImportData.length} Immobilien)</h4>
+                              <div className="max-h-60 overflow-y-auto border rounded-lg">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Titel</TableHead>
+                                      <TableHead>Stadt</TableHead>
+                                      <TableHead>Preis</TableHead>
+                                      <TableHead>Fläche</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {csvImportData.map((item, i) => (
+                                      <TableRow key={i}>
+                                        <TableCell>{item.title}</TableCell>
+                                        <TableCell>{item.city}</TableCell>
+                                        <TableCell>{item.price} €</TableCell>
+                                        <TableCell>{item.area} m²</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setShowCSVImport(false);
+                              setCsvImportData([]);
+                              setCsvImportError(null);
+                            }}
+                          >
+                            Abbrechen
+                          </Button>
+                          <Button
+                            className="bg-gold hover:bg-gold/90"
+                            disabled={csvImportData.length === 0 || createPropertyMutation.isPending}
+                            onClick={async () => {
+                              try {
+                                for (const item of csvImportData) {
+                                  await createPropertyMutation.mutateAsync({
+                                    title: item.title,
+                                    description: item.description,
+                                    location: item.location,
+                                    city: item.city,
+                                    price: item.price,
+                                    area: item.area,
+                                    bedrooms: parseInt(item.bedrooms) || 2,
+                                    bathrooms: parseInt(item.bathrooms) || 1,
+                                    constructionStatus: item.constructionStatus || 'planning',
+                                    completionDate: item.completionDate,
+                                    mainImage: item.mainImage,
+                                    images: item.images,
+                                    videos: item.videoUrl ? JSON.stringify([item.videoUrl]) : undefined,
+                                    features: item.amenities ? JSON.stringify(item.amenities.split(',').map((a: string) => a.trim())) : undefined,
+                                    expectedReturn: item.expectedReturn,
+                                    minDownPayment: item.minDownPayment,
+                                    maxInstallmentMonths: parseInt(item.maxInstallmentMonths) || 36,
+                                  });
+                                }
+                                setShowCSVImport(false);
+                                setCsvImportData([]);
+                                toast.success(`${csvImportData.length} Immobilien erfolgreich importiert`);
+                              } catch (err) {
+                                toast.error('Fehler beim Importieren der Immobilien');
+                              }
+                            }}
+                          >
+                            {csvImportData.length} Immobilien importieren
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* New Property Dialog */}
+                    <Dialog open={showPropertyDialog} onOpenChange={(open) => {
+                      setShowPropertyDialog(open);
+                      if (!open) resetPropertyForm();
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-gold hover:bg-gold/90">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Neue Immobilie
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>
@@ -794,24 +979,22 @@ export default function Admin() {
                             />
                           </div>
                           <div className="col-span-2">
-                            <Label>Hauptbild URL *</Label>
-                            <Input
-                              value={propertyForm.mainImage}
-                              onChange={(e) => setPropertyForm({ ...propertyForm, mainImage: e.target.value })}
-                              placeholder="https://example.com/hauptbild.jpg oder Google Drive Link"
-                              required
+                            <ImageUpload
+                              label="Bilder hochladen (erstes Bild = Hauptbild) *"
+                              value={[
+                                ...(propertyForm.mainImage ? [propertyForm.mainImage] : []),
+                                ...(propertyForm.images ? propertyForm.images.split(',').map(s => s.trim()).filter(s => s) : [])
+                              ]}
+                              onChange={(urls) => {
+                                const [main, ...rest] = urls;
+                                setPropertyForm({
+                                  ...propertyForm,
+                                  mainImage: main || '',
+                                  images: rest.join(', ')
+                                });
+                              }}
+                              maxFiles={15}
                             />
-                            <p className="text-xs text-muted-foreground mt-1">URL zum Hauptbild der Immobilie (Google Drive, Dropbox oder direkter Link)</p>
-                          </div>
-                          <div className="col-span-2">
-                            <Label>Weitere Bilder (URLs, kommagetrennt)</Label>
-                            <Textarea
-                              value={propertyForm.images}
-                              onChange={(e) => setPropertyForm({ ...propertyForm, images: e.target.value })}
-                              placeholder="https://example.com/bild1.jpg, https://example.com/bild2.jpg"
-                              rows={2}
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">Mehrere Bild-URLs mit Komma trennen für die Galerie</p>
                           </div>
                           <div className="col-span-2">
                             <Label>Video URL (YouTube/Vimeo)</Label>
@@ -837,7 +1020,6 @@ export default function Admin() {
                           <Button
                             type="button"
                             variant="outline"
-                            className="flex-1"
                             onClick={() => {
                               setShowPropertyDialog(false);
                               resetPropertyForm();
@@ -846,8 +1028,17 @@ export default function Admin() {
                             Abbrechen
                           </Button>
                           <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setShowPropertyPreview(true)}
+                            disabled={!propertyForm.title}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Vorschau
+                          </Button>
+                          <Button
                             type="submit"
-                            className="flex-1 bg-gold hover:bg-gold/90"
+                            className="bg-gold hover:bg-gold/90"
                             disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending}
                           >
                             {editingProperty ? "Aktualisieren" : "Hinzufügen"}
@@ -856,6 +1047,134 @@ export default function Admin() {
                       </form>
                     </DialogContent>
                   </Dialog>
+
+                  {/* Property Preview Dialog */}
+                  <Dialog open={showPropertyPreview} onOpenChange={setShowPropertyPreview}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Vorschau: {propertyForm.title || 'Neue Immobilie'}</DialogTitle>
+                        <DialogDescription>So wird die Immobilie auf der Website angezeigt</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-6">
+                        {/* Main Image */}
+                        <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                          {propertyForm.mainImage ? (
+                            <img
+                              src={propertyForm.mainImage}
+                              alt={propertyForm.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/placeholder-property.svg';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              Kein Hauptbild ausgewählt
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Property Info */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h3 className="text-2xl font-bold">{propertyForm.title || 'Titel fehlt'}</h3>
+                            <p className="text-muted-foreground">{propertyForm.location}, {propertyForm.city}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-3xl font-bold text-[#C4A052]">
+                              {propertyForm.price ? `${parseFloat(propertyForm.price).toLocaleString('de-DE')} €` : 'Preis fehlt'}
+                            </p>
+                            {propertyForm.expectedReturn && (
+                              <p className="text-sm text-green-600">Rendite: {propertyForm.expectedReturn}%</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                          <h4 className="font-semibold mb-2">Beschreibung</h4>
+                          <p className="text-muted-foreground">{propertyForm.description || 'Keine Beschreibung'}</p>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{propertyForm.area || '-'}</p>
+                            <p className="text-xs text-muted-foreground">m² Fläche</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{propertyForm.bedrooms}</p>
+                            <p className="text-xs text-muted-foreground">Zimmer</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{propertyForm.bathrooms}</p>
+                            <p className="text-xs text-muted-foreground">Bäder</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">
+                              {propertyForm.constructionStatus === 'planning' ? 'Planung' :
+                               propertyForm.constructionStatus === 'construction' ? 'Bau' : 'Fertig'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Status</p>
+                          </div>
+                        </div>
+
+                        {/* Amenities */}
+                        {propertyForm.amenities && (
+                          <div>
+                            <h4 className="font-semibold mb-2">Ausstattung</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {propertyForm.amenities.split(',').map((amenity, i) => (
+                                <Badge key={i} variant="secondary">{amenity.trim()}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Gallery */}
+                        {propertyForm.images && (
+                          <div>
+                            <h4 className="font-semibold mb-2">Galerie</h4>
+                            <div className="grid grid-cols-4 gap-2">
+                              {propertyForm.images.split(',').slice(0, 4).map((img, i) => (
+                                <div key={i} className="aspect-square bg-muted rounded overflow-hidden">
+                                  <img
+                                    src={img.trim()}
+                                    alt={`Bild ${i + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Video */}
+                        {propertyForm.videoUrl && (
+                          <div>
+                            <h4 className="font-semibold mb-2">Video</h4>
+                            <a
+                              href={propertyForm.videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#C4A052] hover:underline"
+                            >
+                              Video ansehen →
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-end mt-4">
+                        <Button onClick={() => setShowPropertyPreview(false)}>
+                          Schließen
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1507,6 +1826,68 @@ export default function Admin() {
                 </div>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+
+          {/* CRM Tab */}
+          <TabsContent value="crm" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-[#C4A052]" />
+                      CRM - Kundenbeziehungsmanagement
+                    </CardTitle>
+                    <CardDescription>
+                      Verwalten Sie Leads, Kunden und Vertriebsprozesse
+                    </CardDescription>
+                  </div>
+                  <Link href="/crm">
+                    <Button className="bg-[#C4A052] hover:bg-[#B39142]">
+                      CRM öffnen
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-6">
+                      <div className="text-2xl font-bold text-[#C4A052]">
+                        {inquiries?.filter((c: any) => c.status === 'new').length || 0}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Neue Leads</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-6">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {inquiries?.filter((c: any) => c.status === 'contacted').length || 0}
+                      </div>
+                      <p className="text-sm text-muted-foreground">In Bearbeitung</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-6">
+                      <div className="text-2xl font-bold text-green-600">
+                        {inquiries?.filter((c: any) => c.status === 'closed').length || 0}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Abgeschlossen</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                  <h4 className="font-medium mb-2">CRM-Funktionen</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Lead-Pipeline mit Drag & Drop</li>
+                    <li>• Kundenhistorie und Notizen</li>
+                    <li>• Aufgaben und Erinnerungen</li>
+                    <li>• E-Mail-Vorlagen und Kommunikation</li>
+                    <li>• Verkaufsstatistiken und Reports</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
