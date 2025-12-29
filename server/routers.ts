@@ -49,7 +49,26 @@ import {
   getVideoById,
   updateVideo,
   deleteVideo,
-  getFeaturedVideos
+  getFeaturedVideos,
+  // Wallet functions
+  getOrCreateWallet,
+  getWalletByUserId,
+  updateWalletBalance,
+  createWalletTransaction,
+  getWalletTransactions,
+  getWalletTransactionsByUserId,
+  createDepositRequest,
+  getDepositRequestsByUserId,
+  getPendingDepositRequests,
+  getAllDepositRequests,
+  updateDepositRequestStatus,
+  getDepositRequestById,
+  processDeposit,
+  calculateAndCreditInterest,
+  useWalletForPurchase,
+  getAllWallets,
+  getWalletsQualifyingForInterest,
+  getInterestCalculationsByWalletId
 } from "./db";
 import {
   servicesRouter,
@@ -1050,6 +1069,247 @@ export const appRouter = router({
             totalRows: lines.length - 1,
           };
         }),
+    }),
+  }),
+
+  // ==================== WALLET ROUTER ====================
+  wallet: router({
+    // Get or create wallet for current user
+    get: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      const wallet = await getOrCreateWallet(ctx.user.id);
+      if (!wallet) {
+        throw new Error("Failed to get or create wallet");
+      }
+      
+      // Calculate any pending interest
+      if (wallet.qualifiesForInterest) {
+        await calculateAndCreditInterest(wallet.id);
+        // Refetch wallet with updated bonus
+        return await getWalletByUserId(ctx.user.id);
+      }
+      
+      return wallet;
+    }),
+
+    // Get wallet transactions
+    getTransactions: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("User not authenticated");
+        }
+        return await getWalletTransactionsByUserId(ctx.user.id, input?.limit || 50);
+      }),
+
+    // Create deposit request
+    createDepositRequest: protectedProcedure
+      .input(z.object({
+        amount: z.number().min(100, "Mindesteinzahlung: 100€"),
+        method: z.enum(["bank_transfer", "crypto_btc", "crypto_eth", "crypto_usdt", "crypto_other"]),
+        cryptoCurrency: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("User not authenticated");
+        }
+        
+        const wallet = await getOrCreateWallet(ctx.user.id);
+        if (!wallet) {
+          throw new Error("Failed to get wallet");
+        }
+
+        // Set expiration time (24 hours for crypto, 7 days for bank)
+        const expiresAt = new Date();
+        if (input.method === "bank_transfer") {
+          expiresAt.setDate(expiresAt.getDate() + 7);
+        } else {
+          expiresAt.setHours(expiresAt.getHours() + 24);
+        }
+
+        const requestId = await createDepositRequest({
+          walletId: wallet.id,
+          userId: ctx.user.id,
+          amount: input.amount.toFixed(2),
+          method: input.method,
+          cryptoCurrency: input.cryptoCurrency,
+          status: "pending",
+          expiresAt,
+          notes: input.notes,
+        });
+
+        return { requestId, expiresAt };
+      }),
+
+    // Get user's deposit requests
+    getDepositRequests: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      return await getDepositRequestsByUserId(ctx.user.id);
+    }),
+
+    // Get interest calculations
+    getInterestHistory: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      const wallet = await getWalletByUserId(ctx.user.id);
+      if (!wallet) {
+        return [];
+      }
+      return await getInterestCalculationsByWalletId(wallet.id);
+    }),
+  }),
+
+  // Admin Wallet Router
+  adminWallet: router({
+    // Get all wallets
+    getAllWallets: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new Error("Admin access required");
+      }
+      return await getAllWallets();
+    }),
+
+    // Get all deposit requests
+    getAllDepositRequests: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new Error("Admin access required");
+      }
+      return await getAllDepositRequests();
+    }),
+
+    // Get pending deposit requests
+    getPendingDepositRequests: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new Error("Admin access required");
+      }
+      return await getPendingDepositRequests();
+    }),
+
+    // Approve deposit request
+    approveDeposit: protectedProcedure
+      .input(z.object({
+        requestId: z.number(),
+        bankReference: z.string().optional(),
+        txHash: z.string().optional(),
+        adminNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Admin access required");
+        }
+
+        const request = await getDepositRequestById(input.requestId);
+        if (!request) {
+          throw new Error("Deposit request not found");
+        }
+
+        if (request.status !== "pending" && request.status !== "awaiting_payment" && request.status !== "payment_received") {
+          throw new Error("Deposit request cannot be approved in current status");
+        }
+
+        // Process the deposit
+        const result = await processDeposit(
+          request.walletId,
+          request.userId,
+          parseFloat(request.amount),
+          request.method as any,
+          {
+            bankReference: input.bankReference,
+            txHash: input.txHash,
+            description: `Einzahlung genehmigt (Anfrage #${request.id})`,
+          }
+        );
+
+        // Update request status
+        await updateDepositRequestStatus(input.requestId, "completed", {
+          adminNotes: input.adminNotes,
+          processedBy: ctx.user.id,
+          processedAt: new Date(),
+        });
+
+        return result;
+      }),
+
+    // Reject deposit request
+    rejectDeposit: protectedProcedure
+      .input(z.object({
+        requestId: z.number(),
+        reason: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Admin access required");
+        }
+
+        await updateDepositRequestStatus(input.requestId, "cancelled", {
+          adminNotes: input.reason,
+          processedBy: ctx.user.id,
+          processedAt: new Date(),
+        });
+
+        return { success: true };
+      }),
+
+    // Manual deposit (admin creates deposit directly)
+    manualDeposit: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        amount: z.number().min(1),
+        method: z.enum(["bank_transfer", "crypto_btc", "crypto_eth", "crypto_usdt", "crypto_other"]),
+        bankReference: z.string().optional(),
+        txHash: z.string().optional(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Admin access required");
+        }
+
+        const wallet = await getOrCreateWallet(input.userId);
+        if (!wallet) {
+          throw new Error("Failed to get or create wallet");
+        }
+
+        const result = await processDeposit(
+          wallet.id,
+          input.userId,
+          input.amount,
+          input.method,
+          {
+            bankReference: input.bankReference,
+            txHash: input.txHash,
+            description: input.description || `Manuelle Einzahlung durch Admin`,
+          }
+        );
+
+        return result;
+      }),
+
+    // Calculate interest for all qualifying wallets
+    calculateAllInterest: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new Error("Admin access required");
+      }
+
+      const wallets = await getWalletsQualifyingForInterest();
+      let credited = 0;
+      let totalAmount = 0;
+
+      for (const wallet of wallets) {
+        const result = await calculateAndCreditInterest(wallet.id);
+        if (result.credited) {
+          credited++;
+          totalAmount += result.amount;
+        }
+      }
+
+      return { walletsProcessed: wallets.length, credited, totalAmount };
     }),
   }),
 

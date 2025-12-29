@@ -106,7 +106,26 @@ export default function Checkout() {
     });
   };
 
+  // Wallet data for payment
+  const { data: walletData } = trpc.wallet.get.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  const walletBalance = parseFloat(walletData?.balance || "0");
+  const walletBonusBalance = parseFloat(walletData?.bonusBalance || "0");
+  const totalWalletBalance = walletBalance + walletBonusBalance;
+  const canPayWithWallet = totalWalletBalance >= totalAmount;
+
   const paymentMethods = [
+    { 
+      id: "wallet", 
+      name: "Wallet-Guthaben", 
+      icon: Wallet, 
+      description: canPayWithWallet 
+        ? `Verfügbar: ${totalWalletBalance.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}` 
+        : `Nicht genug Guthaben (${totalWalletBalance.toLocaleString("de-DE", { style: "currency", currency: "EUR" })})`,
+      disabled: !canPayWithWallet
+    },
     { id: "crypto_btc", name: "Bitcoin (BTC)", icon: Bitcoin, description: "Zahlung mit Bitcoin" },
     { id: "crypto_eth", name: "Ethereum (ETH)", icon: Wallet, description: "Zahlung mit Ethereum" },
     { id: "crypto_usdt", name: "USDT (Tether)", icon: Wallet, description: "Zahlung mit USDT Stablecoin" },
@@ -164,25 +183,44 @@ export default function Checkout() {
               <CardContent>
                 <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                   <div className="grid gap-4">
-                    {paymentMethods.map((method) => {
+                    {paymentMethods.map((method: any) => {
                       const Icon = method.icon;
+                      const isDisabled = method.disabled || false;
                       return (
                         <label
                           key={method.id}
-                          className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all ${
-                            paymentMethod === method.id
+                          className={`flex items-center gap-4 p-4 border rounded-lg transition-all ${
+                            isDisabled 
+                              ? "opacity-50 cursor-not-allowed bg-gray-50"
+                              : "cursor-pointer"
+                          } ${
+                            paymentMethod === method.id && !isDisabled
                               ? "border-[#C4A052] bg-[#C4A052]/5"
                               : "border-gray-200 hover:border-[#C4A052]/50"
                           }`}
                         >
-                          <RadioGroupItem value={method.id} />
-                          <div className="p-2 bg-[#C4A052]/10 rounded-lg">
-                            <Icon className="w-6 h-6 text-[#C4A052]" />
+                          <RadioGroupItem value={method.id} disabled={isDisabled} />
+                          <div className={`p-2 rounded-lg ${isDisabled ? "bg-gray-200" : "bg-[#C4A052]/10"}`}>
+                            <Icon className={`w-6 h-6 ${isDisabled ? "text-gray-400" : "text-[#C4A052]"}`} />
                           </div>
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{method.name}</p>
+                            <p className={`font-medium ${isDisabled ? "text-gray-500" : "text-gray-900"}`}>
+                              {method.name}
+                              {method.id === "wallet" && walletBonusBalance > 0 && (
+                                <Badge className="ml-2 bg-amber-100 text-amber-800 text-xs">
+                                  inkl. {walletBonusBalance.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} Bonus
+                                </Badge>
+                              )}
+                            </p>
                             <p className="text-sm text-gray-500">{method.description}</p>
                           </div>
+                          {method.id === "wallet" && !canPayWithWallet && (
+                            <Link href="/wallet">
+                              <Button variant="outline" size="sm" className="border-[#C4A052] text-[#C4A052]">
+                                Aufladen
+                              </Button>
+                            </Link>
+                          )}
                         </label>
                       );
                     })}
@@ -202,6 +240,19 @@ export default function Checkout() {
                   <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600 mb-2">
                       Nach Abschluss der Bestellung erhalten Sie die Bankverbindung für die Überweisung.
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === "wallet" && canPayWithWallet && (
+                  <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <strong>Wallet-Zahlung:</strong> Der Betrag von {totalAmount.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} wird sofort von Ihrem Wallet abgebucht.
+                      {walletBonusBalance > 0 && (
+                        <span className="block mt-1">
+                          Bonus-Guthaben wird zuerst verwendet (bis zu {Math.min(walletBonusBalance, totalAmount).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}).
+                        </span>
+                      )}
                     </p>
                   </div>
                 )}

@@ -615,3 +615,147 @@ export const videos = mysqlTable("videos", {
 
 export type Video = typeof videos.$inferSelect;
 export type InsertVideo = typeof videos.$inferInsert;
+
+/**
+ * ============================================
+ * CUSTOMER WALLET SYSTEM
+ * ============================================
+ */
+
+/**
+ * Customer wallets table - Main wallet for each user
+ */
+export const customerWallets = mysqlTable("customer_wallets", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  /** Main balance in EUR */
+  balance: decimal("balance", { precision: 15, scale: 2 }).default("0.00").notNull(),
+  /** Bonus balance from interest (can only be used for purchases) */
+  bonusBalance: decimal("bonusBalance", { precision: 15, scale: 2 }).default("0.00").notNull(),
+  /** Total deposited amount (for tracking first deposit bonus eligibility) */
+  totalDeposited: decimal("totalDeposited", { precision: 15, scale: 2 }).default("0.00").notNull(),
+  /** Whether user qualifies for 7% annual interest (first deposit >= 10000€) */
+  qualifiesForInterest: boolean("qualifiesForInterest").default(false).notNull(),
+  /** Date when interest was last calculated */
+  lastInterestCalculation: timestamp("lastInterestCalculation"),
+  /** First deposit date (for interest calculation) */
+  firstDepositDate: timestamp("firstDepositDate"),
+  /** Wallet status */
+  status: mysqlEnum("status", ["active", "frozen", "closed"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CustomerWallet = typeof customerWallets.$inferSelect;
+export type InsertCustomerWallet = typeof customerWallets.$inferInsert;
+
+/**
+ * Wallet transactions table - All deposits, withdrawals, and purchases
+ */
+export const walletTransactions = mysqlTable("wallet_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  walletId: int("walletId").notNull(),
+  userId: int("userId").notNull(),
+  /** Transaction type */
+  type: mysqlEnum("type", ["deposit", "withdrawal", "purchase", "refund", "interest_credit", "bonus_used"]).notNull(),
+  /** Amount in EUR */
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  /** Balance after transaction */
+  balanceAfter: decimal("balanceAfter", { precision: 15, scale: 2 }).notNull(),
+  /** Bonus balance after transaction (if applicable) */
+  bonusBalanceAfter: decimal("bonusBalanceAfter", { precision: 15, scale: 2 }),
+  /** Deposit method */
+  depositMethod: mysqlEnum("depositMethod", ["bank_transfer", "crypto_btc", "crypto_eth", "crypto_usdt", "crypto_other"]),
+  /** For crypto deposits: currency used */
+  cryptoCurrency: varchar("cryptoCurrency", { length: 20 }),
+  /** For crypto deposits: amount in crypto */
+  cryptoAmount: decimal("cryptoAmount", { precision: 20, scale: 8 }),
+  /** For crypto deposits: exchange rate used */
+  exchangeRate: decimal("exchangeRate", { precision: 20, scale: 8 }),
+  /** For crypto deposits: transaction hash */
+  txHash: varchar("txHash", { length: 255 }),
+  /** For bank transfers: reference number */
+  bankReference: varchar("bankReference", { length: 255 }),
+  /** Related order ID (for purchases) */
+  orderId: int("orderId"),
+  /** Transaction status */
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  /** Description/notes */
+  description: text("description"),
+  /** Admin notes (internal) */
+  adminNotes: text("adminNotes"),
+  /** Processed by admin user ID */
+  processedBy: int("processedBy"),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletTransaction = typeof walletTransactions.$inferInsert;
+
+/**
+ * Deposit requests table - Pending deposit requests from customers
+ */
+export const depositRequests = mysqlTable("deposit_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  walletId: int("walletId").notNull(),
+  userId: int("userId").notNull(),
+  /** Requested amount in EUR */
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  /** Deposit method */
+  method: mysqlEnum("method", ["bank_transfer", "crypto_btc", "crypto_eth", "crypto_usdt", "crypto_other"]).notNull(),
+  /** For crypto: expected crypto amount */
+  cryptoAmount: decimal("cryptoAmount", { precision: 20, scale: 8 }),
+  /** For crypto: currency */
+  cryptoCurrency: varchar("cryptoCurrency", { length: 20 }),
+  /** For crypto: wallet address to send to */
+  depositAddress: varchar("depositAddress", { length: 255 }),
+  /** For bank: bank account ID to transfer to */
+  bankAccountId: int("bankAccountId"),
+  /** Request status */
+  status: mysqlEnum("status", ["pending", "awaiting_payment", "payment_received", "processing", "completed", "expired", "cancelled"]).default("pending").notNull(),
+  /** Expiration time for the deposit request */
+  expiresAt: timestamp("expiresAt"),
+  /** Customer notes */
+  notes: text("notes"),
+  /** Admin notes */
+  adminNotes: text("adminNotes"),
+  /** Processed by admin */
+  processedBy: int("processedBy"),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DepositRequest = typeof depositRequests.$inferSelect;
+export type InsertDepositRequest = typeof depositRequests.$inferInsert;
+
+/**
+ * Interest calculations log - Track all interest calculations
+ */
+export const interestCalculations = mysqlTable("interest_calculations", {
+  id: int("id").autoincrement().primaryKey(),
+  walletId: int("walletId").notNull(),
+  userId: int("userId").notNull(),
+  /** Balance used for calculation */
+  principalAmount: decimal("principalAmount", { precision: 15, scale: 2 }).notNull(),
+  /** Interest rate applied (7% = 7.00) */
+  interestRate: decimal("interestRate", { precision: 5, scale: 2 }).notNull(),
+  /** Calculated interest amount */
+  interestAmount: decimal("interestAmount", { precision: 15, scale: 2 }).notNull(),
+  /** Period start date */
+  periodStart: timestamp("periodStart").notNull(),
+  /** Period end date */
+  periodEnd: timestamp("periodEnd").notNull(),
+  /** Days in period */
+  daysInPeriod: int("daysInPeriod").notNull(),
+  /** Status */
+  status: mysqlEnum("status", ["calculated", "credited", "cancelled"]).default("calculated").notNull(),
+  /** Related transaction ID when credited */
+  transactionId: int("transactionId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InterestCalculation = typeof interestCalculations.$inferSelect;
+export type InsertInterestCalculation = typeof interestCalculations.$inferInsert;

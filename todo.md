@@ -268,3 +268,13 @@
 - [x] Service-Löschfunktion in AdminDirect hinzufügen
 - [x] API-Integration für Services CRUD
 - [x] Services-Tab im regulären Admin-Dashboard (Admin.tsx) hinzufügen
+
+## Kunden-Wallet-System
+- [x] Datenbank-Schema für Wallets und Transaktionen erstellen
+- [x] Backend API-Routen für Wallet-Operationen implementieren
+- [x] Kunden-Wallet-Seite mit Guthaben-Anzeige erstellen
+- [x] Einzahlungsoptionen (Bank und Krypto) implementieren
+- [x] Bonus-Zinssystem (7% bei Ersteinzahlung ab 10.000€) implementieren
+- [x] Wallet-Integration in Checkout-Prozess
+- [x] Wallet-Link im Header für eingeloggte User
+- [ ] Admin-Bereich für Wallet-Verwaltung (Einzahlungen bestätigen)

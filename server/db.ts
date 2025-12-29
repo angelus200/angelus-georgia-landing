@@ -26,7 +26,19 @@ import {
   InsertLeadDocument,
   videos,
   InsertVideo,
-  Video
+  Video,
+  customerWallets,
+  CustomerWallet,
+  InsertCustomerWallet,
+  walletTransactions,
+  WalletTransaction,
+  InsertWalletTransaction,
+  depositRequests,
+  DepositRequest,
+  InsertDepositRequest,
+  interestCalculations,
+  InterestCalculation,
+  InsertInterestCalculation
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1777,5 +1789,615 @@ export async function getFeaturedVideos(limit: number = 4) {
   } catch (error) {
     console.error("[Database] Failed to get featured videos:", error);
     return [];
+  }
+}
+
+
+// ==================== WALLET FUNCTIONS ====================
+
+/**
+ * Get or create a wallet for a user
+ */
+export async function getOrCreateWallet(userId: number): Promise<CustomerWallet | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    // Check if wallet exists
+    const existingWallet = await db.select()
+      .from(customerWallets)
+      .where(eq(customerWallets.userId, userId))
+      .limit(1);
+
+    if (existingWallet.length > 0) {
+      return existingWallet[0];
+    }
+
+    // Create new wallet
+    const result = await db.insert(customerWallets).values({
+      userId,
+      balance: "0.00",
+      bonusBalance: "0.00",
+      totalDeposited: "0.00",
+      qualifiesForInterest: false,
+      status: "active",
+    });
+
+    // Fetch and return the created wallet
+    const newWallet = await db.select()
+      .from(customerWallets)
+      .where(eq(customerWallets.userId, userId))
+      .limit(1);
+
+    return newWallet[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get or create wallet:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get wallet by user ID
+ */
+export async function getWalletByUserId(userId: number): Promise<CustomerWallet | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const wallet = await db.select()
+      .from(customerWallets)
+      .where(eq(customerWallets.userId, userId))
+      .limit(1);
+
+    return wallet[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get wallet:", error);
+    return null;
+  }
+}
+
+/**
+ * Update wallet balance
+ */
+export async function updateWalletBalance(
+  walletId: number, 
+  balance: string, 
+  bonusBalance?: string,
+  additionalData?: Partial<InsertCustomerWallet>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const updateData: any = {
+      balance,
+      updatedAt: new Date(),
+    };
+    
+    if (bonusBalance !== undefined) {
+      updateData.bonusBalance = bonusBalance;
+    }
+    
+    if (additionalData) {
+      Object.assign(updateData, additionalData);
+    }
+
+    await db.update(customerWallets)
+      .set(updateData)
+      .where(eq(customerWallets.id, walletId));
+  } catch (error) {
+    console.error("[Database] Failed to update wallet balance:", error);
+    throw error;
+  }
+}
+
+/**
+ * Create wallet transaction
+ */
+export async function createWalletTransaction(transaction: InsertWalletTransaction): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(walletTransactions).values(transaction);
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create wallet transaction:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get wallet transactions by wallet ID
+ */
+export async function getWalletTransactions(walletId: number, limit: number = 50): Promise<WalletTransaction[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.walletId, walletId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Failed to get wallet transactions:", error);
+    return [];
+  }
+}
+
+/**
+ * Get wallet transactions by user ID
+ */
+export async function getWalletTransactionsByUserId(userId: number, limit: number = 50): Promise<WalletTransaction[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.userId, userId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Failed to get wallet transactions by user:", error);
+    return [];
+  }
+}
+
+/**
+ * Create deposit request
+ */
+export async function createDepositRequest(request: InsertDepositRequest): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(depositRequests).values(request);
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create deposit request:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get deposit requests by user ID
+ */
+export async function getDepositRequestsByUserId(userId: number): Promise<DepositRequest[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(depositRequests)
+      .where(eq(depositRequests.userId, userId))
+      .orderBy(desc(depositRequests.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get deposit requests:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all pending deposit requests (for admin)
+ */
+export async function getPendingDepositRequests(): Promise<DepositRequest[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(depositRequests)
+      .where(eq(depositRequests.status, "pending"))
+      .orderBy(desc(depositRequests.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get pending deposit requests:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all deposit requests (for admin)
+ */
+export async function getAllDepositRequests(): Promise<DepositRequest[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(depositRequests)
+      .orderBy(desc(depositRequests.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get all deposit requests:", error);
+    return [];
+  }
+}
+
+/**
+ * Update deposit request status
+ */
+export async function updateDepositRequestStatus(
+  id: number, 
+  status: string,
+  additionalData?: Partial<InsertDepositRequest>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const updateData: any = {
+      status,
+      updatedAt: new Date(),
+    };
+    
+    if (additionalData) {
+      Object.assign(updateData, additionalData);
+    }
+
+    await db.update(depositRequests)
+      .set(updateData)
+      .where(eq(depositRequests.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update deposit request status:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get deposit request by ID
+ */
+export async function getDepositRequestById(id: number): Promise<DepositRequest | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const request = await db.select()
+      .from(depositRequests)
+      .where(eq(depositRequests.id, id))
+      .limit(1);
+
+    return request[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get deposit request:", error);
+    return null;
+  }
+}
+
+/**
+ * Create interest calculation record
+ */
+export async function createInterestCalculation(calculation: InsertInterestCalculation): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(interestCalculations).values(calculation);
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create interest calculation:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get interest calculations by wallet ID
+ */
+export async function getInterestCalculationsByWalletId(walletId: number): Promise<InterestCalculation[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(interestCalculations)
+      .where(eq(interestCalculations.walletId, walletId))
+      .orderBy(desc(interestCalculations.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get interest calculations:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all wallets (for admin)
+ */
+export async function getAllWallets(): Promise<CustomerWallet[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(customerWallets)
+      .orderBy(desc(customerWallets.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get all wallets:", error);
+    return [];
+  }
+}
+
+/**
+ * Get wallets qualifying for interest
+ */
+export async function getWalletsQualifyingForInterest(): Promise<CustomerWallet[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(customerWallets)
+      .where(and(
+        eq(customerWallets.qualifiesForInterest, true),
+        eq(customerWallets.status, "active")
+      ));
+  } catch (error) {
+    console.error("[Database] Failed to get wallets qualifying for interest:", error);
+    return [];
+  }
+}
+
+/**
+ * Process deposit and update wallet
+ */
+export async function processDeposit(
+  walletId: number,
+  userId: number,
+  amount: number,
+  depositMethod: "bank_transfer" | "crypto_btc" | "crypto_eth" | "crypto_usdt" | "crypto_other",
+  additionalData?: {
+    cryptoCurrency?: string;
+    cryptoAmount?: string;
+    exchangeRate?: string;
+    txHash?: string;
+    bankReference?: string;
+    description?: string;
+  }
+): Promise<{ success: boolean; qualifiesForBonus: boolean; bonusAmount: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    // Get current wallet
+    const wallet = await db.select()
+      .from(customerWallets)
+      .where(eq(customerWallets.id, walletId))
+      .limit(1);
+
+    if (!wallet[0]) {
+      throw new Error("Wallet not found");
+    }
+
+    const currentBalance = parseFloat(wallet[0].balance || "0");
+    const currentTotalDeposited = parseFloat(wallet[0].totalDeposited || "0");
+    const newBalance = currentBalance + amount;
+    const newTotalDeposited = currentTotalDeposited + amount;
+
+    // Check if this is the first deposit and qualifies for 7% interest
+    const isFirstDeposit = currentTotalDeposited === 0;
+    const qualifiesForBonus = isFirstDeposit && amount >= 10000;
+
+    // Update wallet
+    const updateData: any = {
+      balance: newBalance.toFixed(2),
+      totalDeposited: newTotalDeposited.toFixed(2),
+      updatedAt: new Date(),
+    };
+
+    if (qualifiesForBonus) {
+      updateData.qualifiesForInterest = true;
+      updateData.firstDepositDate = new Date();
+      updateData.lastInterestCalculation = new Date();
+    }
+
+    await db.update(customerWallets)
+      .set(updateData)
+      .where(eq(customerWallets.id, walletId));
+
+    // Create transaction record
+    await db.insert(walletTransactions).values({
+      walletId,
+      userId,
+      type: "deposit",
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      bonusBalanceAfter: wallet[0].bonusBalance,
+      depositMethod,
+      cryptoCurrency: additionalData?.cryptoCurrency,
+      cryptoAmount: additionalData?.cryptoAmount,
+      exchangeRate: additionalData?.exchangeRate,
+      txHash: additionalData?.txHash,
+      bankReference: additionalData?.bankReference,
+      status: "completed",
+      description: additionalData?.description || `Einzahlung via ${depositMethod}`,
+    });
+
+    return {
+      success: true,
+      qualifiesForBonus,
+      bonusAmount: qualifiesForBonus ? amount * 0.07 : 0,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to process deposit:", error);
+    throw error;
+  }
+}
+
+/**
+ * Calculate and credit interest for a wallet
+ */
+export async function calculateAndCreditInterest(walletId: number): Promise<{ credited: boolean; amount: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    const wallet = await db.select()
+      .from(customerWallets)
+      .where(eq(customerWallets.id, walletId))
+      .limit(1);
+
+    if (!wallet[0] || !wallet[0].qualifiesForInterest) {
+      return { credited: false, amount: 0 };
+    }
+
+    const balance = parseFloat(wallet[0].balance || "0");
+    if (balance <= 0) {
+      return { credited: false, amount: 0 };
+    }
+
+    const lastCalculation = wallet[0].lastInterestCalculation || wallet[0].firstDepositDate;
+    if (!lastCalculation) {
+      return { credited: false, amount: 0 };
+    }
+
+    const now = new Date();
+    const daysSinceLastCalculation = Math.floor(
+      (now.getTime() - lastCalculation.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysSinceLastCalculation < 1) {
+      return { credited: false, amount: 0 };
+    }
+
+    // Calculate daily interest (7% annual = 0.07/365 per day)
+    const dailyRate = 0.07 / 365;
+    const interestAmount = balance * dailyRate * daysSinceLastCalculation;
+    const roundedInterest = Math.round(interestAmount * 100) / 100;
+
+    if (roundedInterest < 0.01) {
+      return { credited: false, amount: 0 };
+    }
+
+    // Credit interest to bonus balance
+    const currentBonusBalance = parseFloat(wallet[0].bonusBalance || "0");
+    const newBonusBalance = currentBonusBalance + roundedInterest;
+
+    // Update wallet
+    await db.update(customerWallets)
+      .set({
+        bonusBalance: newBonusBalance.toFixed(2),
+        lastInterestCalculation: now,
+        updatedAt: now,
+      })
+      .where(eq(customerWallets.id, walletId));
+
+    // Create interest calculation record
+    await db.insert(interestCalculations).values({
+      walletId,
+      userId: wallet[0].userId,
+      principalAmount: balance.toFixed(2),
+      interestRate: "7.00",
+      interestAmount: roundedInterest.toFixed(2),
+      periodStart: lastCalculation,
+      periodEnd: now,
+      daysInPeriod: daysSinceLastCalculation,
+      status: "credited",
+    });
+
+    // Create transaction record
+    await db.insert(walletTransactions).values({
+      walletId,
+      userId: wallet[0].userId,
+      type: "interest_credit",
+      amount: roundedInterest.toFixed(2),
+      balanceAfter: wallet[0].balance,
+      bonusBalanceAfter: newBonusBalance.toFixed(2),
+      status: "completed",
+      description: `Zinsgutschrift für ${daysSinceLastCalculation} Tage (7% p.a.)`,
+    });
+
+    return { credited: true, amount: roundedInterest };
+  } catch (error) {
+    console.error("[Database] Failed to calculate and credit interest:", error);
+    throw error;
+  }
+}
+
+/**
+ * Use wallet balance for purchase
+ */
+export async function useWalletForPurchase(
+  walletId: number,
+  userId: number,
+  amount: number,
+  orderId: number,
+  description: string
+): Promise<{ success: boolean; mainUsed: number; bonusUsed: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    const wallet = await db.select()
+      .from(customerWallets)
+      .where(eq(customerWallets.id, walletId))
+      .limit(1);
+
+    if (!wallet[0]) {
+      throw new Error("Wallet not found");
+    }
+
+    const mainBalance = parseFloat(wallet[0].balance || "0");
+    const bonusBalance = parseFloat(wallet[0].bonusBalance || "0");
+    const totalAvailable = mainBalance + bonusBalance;
+
+    if (totalAvailable < amount) {
+      throw new Error("Insufficient wallet balance");
+    }
+
+    // Use bonus balance first, then main balance
+    let bonusUsed = 0;
+    let mainUsed = 0;
+
+    if (bonusBalance >= amount) {
+      bonusUsed = amount;
+    } else {
+      bonusUsed = bonusBalance;
+      mainUsed = amount - bonusBalance;
+    }
+
+    const newMainBalance = mainBalance - mainUsed;
+    const newBonusBalance = bonusBalance - bonusUsed;
+
+    // Update wallet
+    await db.update(customerWallets)
+      .set({
+        balance: newMainBalance.toFixed(2),
+        bonusBalance: newBonusBalance.toFixed(2),
+        updatedAt: new Date(),
+      })
+      .where(eq(customerWallets.id, walletId));
+
+    // Create transaction record for main balance usage
+    if (mainUsed > 0) {
+      await db.insert(walletTransactions).values({
+        walletId,
+        userId,
+        type: "purchase",
+        amount: mainUsed.toFixed(2),
+        balanceAfter: newMainBalance.toFixed(2),
+        bonusBalanceAfter: newBonusBalance.toFixed(2),
+        orderId,
+        status: "completed",
+        description,
+      });
+    }
+
+    // Create transaction record for bonus balance usage
+    if (bonusUsed > 0) {
+      await db.insert(walletTransactions).values({
+        walletId,
+        userId,
+        type: "bonus_used",
+        amount: bonusUsed.toFixed(2),
+        balanceAfter: newMainBalance.toFixed(2),
+        bonusBalanceAfter: newBonusBalance.toFixed(2),
+        orderId,
+        status: "completed",
+        description: `Bonus-Guthaben verwendet: ${description}`,
+      });
+    }
+
+    return { success: true, mainUsed, bonusUsed };
+  } catch (error) {
+    console.error("[Database] Failed to use wallet for purchase:", error);
+    throw error;
   }
 }

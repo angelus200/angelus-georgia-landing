@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Calendar } from "lucide-react";
+import { Menu, X, Calendar, Wallet } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -74,8 +74,14 @@ export default function Header() {
             </Button>
             {user ? (
               <>
-                <Link href="/investor-dashboard">
+                <Link href="/wallet">
                   <Button variant="outline" className="border-[#C4A052] text-[#C4A052] hover:bg-[#C4A052]/10">
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Wallet
+                  </Button>
+                </Link>
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-gray-700 hover:text-[#C4A052]">
                     Dashboard
                   </Button>
                 </Link>
@@ -128,8 +134,14 @@ export default function Header() {
               </Button>
               {user ? (
                 <>
-                  <Link href="/investor-dashboard">
+                  <Link href="/wallet">
                     <Button variant="outline" className="w-full border-[#C4A052] text-[#C4A052]">
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Wallet
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard">
+                    <Button variant="ghost" className="w-full">
                       Dashboard
                     </Button>
                   </Link>
