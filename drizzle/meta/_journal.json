@@ -78,6 +78,13 @@
       "when": 1767027894287,
       "tag": "0010_demonic_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1767030922492,
+      "tag": "0011_whole_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

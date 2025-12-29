@@ -305,7 +305,7 @@ export const orders = mysqlTable("orders", {
   /** Exchange rate at time of order */
   exchangeRate: decimal("exchangeRate", { precision: 20, scale: 8 }),
   status: mysqlEnum("status", ["pending", "awaiting_payment", "payment_received", "processing", "completed", "cancelled", "refunded"]).default("pending").notNull(),
-  paymentMethod: mysqlEnum("paymentMethod", ["crypto_btc", "crypto_eth", "crypto_usdt", "bank_transfer", "card"]),
+  paymentMethod: mysqlEnum("paymentMethod", ["wallet", "crypto_btc", "crypto_eth", "crypto_usdt", "bank_transfer", "card"]),
   /** Payment details JSON (wallet address, bank details, etc.) */
   paymentDetails: text("paymentDetails"),
   /** Billing address JSON */

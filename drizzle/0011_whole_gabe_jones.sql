@@ -1,0 +1,1 @@
+ALTER TABLE `orders` MODIFY COLUMN `paymentMethod` enum('wallet','crypto_btc','crypto_eth','crypto_usdt','bank_transfer','card');

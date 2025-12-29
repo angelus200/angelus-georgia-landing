@@ -184,7 +184,7 @@ export const ordersRouter = router({
           })
         ),
         totalAmount: z.string(),
-        paymentMethod: z.enum(["crypto_btc", "crypto_eth", "crypto_usdt", "bank_transfer", "card"]),
+        paymentMethod: z.enum(["wallet", "crypto_btc", "crypto_eth", "crypto_usdt", "bank_transfer", "card"]),
         billingAddress: z.string().optional(),
         notes: z.string().optional(),
       })
@@ -192,6 +192,29 @@ export const ordersRouter = router({
     .mutation(async ({ input, ctx }) => {
       if (!ctx.user?.id) {
         throw new Error("User not authenticated");
+      }
+
+      // Handle wallet payment - validate first, deduct after order creation
+      let walletPaymentData: { walletId: number; userId: number; amount: number } | null = null;
+      
+      if (input.paymentMethod === "wallet") {
+        const { getWalletByUserId } = await import("./db");
+        const wallet = await getWalletByUserId(ctx.user.id);
+        
+        if (!wallet) {
+          throw new Error("Kein Wallet gefunden. Bitte erstellen Sie zuerst ein Wallet.");
+        }
+        
+        const totalAmount = parseFloat(input.totalAmount);
+        const walletBalance = parseFloat(wallet.balance);
+        const bonusBalance = parseFloat(wallet.bonusBalance);
+        const totalAvailable = walletBalance + bonusBalance;
+        
+        if (totalAvailable < totalAmount) {
+          throw new Error(`Nicht genügend Guthaben. Verfügbar: ${totalAvailable.toFixed(2)}€, Benötigt: ${totalAmount.toFixed(2)}€`);
+        }
+        
+        walletPaymentData = { walletId: wallet.id, userId: ctx.user.id, amount: totalAmount };
       }
 
       const orderNumber = generateOrderNumber();
@@ -227,6 +250,20 @@ export const ordersRouter = router({
 
       await createOrderItems(orderItemsData);
 
+      // Process wallet payment after order creation
+      if (walletPaymentData) {
+        const { useWalletForPurchase, updateOrderStatus } = await import("./db");
+        await useWalletForPurchase(
+          walletPaymentData.walletId,
+          walletPaymentData.userId,
+          walletPaymentData.amount,
+          orderId,
+          `Bestellung #${orderNumber}`
+        );
+        // Mark order as paid immediately for wallet payments
+        await updateOrderStatus(orderId, "completed");
+      }
+
       // Notify owner
       await notifyOwner({
         title: "Neue Bestellung",
@@ -235,9 +272,10 @@ export const ordersRouter = router({
 
       // Send order confirmation email to customer
       const paymentMethodNames: Record<string, string> = {
-        bitcoin: "Bitcoin (BTC)",
-        ethereum: "Ethereum (ETH)",
-        usdt: "USDT (Tether)",
+        wallet: "Wallet-Guthaben",
+        crypto_btc: "Bitcoin (BTC)",
+        crypto_eth: "Ethereum (ETH)",
+        crypto_usdt: "USDT (Tether)",
         bank_transfer: "Banküberweisung",
       };
 
@@ -251,9 +289,11 @@ export const ordersRouter = router({
         })),
         totalAmount: parseFloat(input.totalAmount),
         paymentMethod: paymentMethodNames[input.paymentMethod] || input.paymentMethod,
-        paymentInstructions: input.paymentMethod === "bank_transfer" 
-          ? "Bitte überweisen Sie den Betrag auf unser Bankkonto. Die Kontodaten finden Sie auf der Bestellbestätigungsseite."
-          : `Bitte senden Sie den Betrag an die auf der Bestellbestätigungsseite angezeigte ${paymentMethodNames[input.paymentMethod]}-Adresse.`,
+        paymentInstructions: input.paymentMethod === "wallet"
+          ? "Die Zahlung wurde erfolgreich von Ihrem Wallet-Guthaben abgebucht. Ihre Bestellung wird sofort bearbeitet."
+          : input.paymentMethod === "bank_transfer" 
+            ? "Bitte überweisen Sie den Betrag auf unser Bankkonto. Die Kontodaten finden Sie auf der Bestellbestätigungsseite."
+            : `Bitte senden Sie den Betrag an die auf der Bestellbestätigungsseite angezeigte ${paymentMethodNames[input.paymentMethod]}-Adresse.`,
       });
 
       // Send admin notification

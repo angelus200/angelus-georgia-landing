@@ -306,8 +306,12 @@
 - [x] Guthaben und Bonus-Guthaben anzeigen
 - [x] Einzahlungsmöglichkeit für Investoren
 
-## Stripe-Zahlungsintegration
-- [ ] Stripe Feature mit webdev_add_feature hinzufügen
-- [ ] Stripe für Produkte und Services konfigurieren
-- [ ] Checkout-Prozess mit Stripe verbinden
-- [ ] Abonnement-Funktionalität implementieren
+## Wallet-Zahlung im Checkout
+- [x] Wallet als Zahlungsmethode im Checkout hinzufügen
+- [x] Bonus-Guthaben zuerst verwenden, dann Hauptguthaben
+- [x] Wallet-Zahlung sofort als abgeschlossen markieren
+- [x] E-Mail-Bestätigung für Wallet-Zahlungen anpassen
+- [x] Unit Tests für Wallet-Zahlungslogik erstellen
+
+## Bug-Fix: Wallets-Tab im AdminDirect
+- [x] Wallets-Tab Button im AdminDirect prüfen und korrigieren
