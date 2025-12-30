@@ -1126,6 +1126,16 @@ function AdminDirectDashboard() {
           >
             💰 Wallets
           </button>
+          <button
+            onClick={() => setActiveTab("contracts")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "contracts" 
+                ? "bg-amber-100 text-amber-800 shadow-sm" 
+                : "text-amber-700 hover:text-amber-900 bg-amber-50"
+            }`}
+          >
+            📝 Verträge
+          </button>
           <Link
             href="/crm"
             className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-[#C4A052] text-white hover:bg-[#B39142]"
@@ -1360,6 +1370,11 @@ function AdminDirectDashboard() {
               {/* Wallets Tab */}
               {activeTab === "wallets" && (
                 <WalletsTab />
+              )}
+
+              {/* Contracts Tab */}
+              {activeTab === "contracts" && (
+                <ContractsTab />
               )}
             </>
           )}
@@ -2917,6 +2932,523 @@ function WalletsTab() {
               >
                 Einzahlen
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Contracts Tab Component
+function ContractsTab() {
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedContract, setSelectedContract] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [statusReason, setStatusReason] = useState("");
+
+  const statusLabels: Record<string, string> = {
+    draft: "Entwurf",
+    pending_payment: "Warte auf Zahlung",
+    active: "Aktiv",
+    completed: "Abgeschlossen",
+    withdrawal: "Widerrufen",
+    cancelled: "Storniert",
+    converted: "Umgewandelt",
+  };
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-gray-100 text-gray-800",
+    pending_payment: "bg-orange-100 text-orange-800",
+    active: "bg-green-100 text-green-800",
+    completed: "bg-blue-100 text-blue-800",
+    withdrawal: "bg-red-100 text-red-800",
+    cancelled: "bg-red-100 text-red-800",
+    converted: "bg-purple-100 text-purple-800",
+  };
+
+  const fetchContracts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/trpc/contracts.getAllAdmin", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (data.result?.data) {
+        setContracts(data.result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContracts();
+  }, []);
+
+  const filteredContracts = contracts.filter((contract) => {
+    const matchesStatus = statusFilter === "all" || contract.status === statusFilter;
+    const matchesSearch = searchTerm === "" ||
+      contract.contractNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.buyerFirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.buyerLastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contract.propertyTitle?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const handleUpdateStatus = async () => {
+    if (!selectedContract || !newStatus) return;
+    
+    try {
+      const response = await fetch("/api/trpc/contracts.updateStatus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          json: {
+            contractId: selectedContract.id,
+            status: newStatus,
+            reason: statusReason || undefined,
+          },
+        }),
+      });
+      
+      if (response.ok) {
+        alert("Status erfolgreich aktualisiert");
+        fetchContracts();
+        setShowStatusModal(false);
+        setSelectedContract(null);
+        setNewStatus("");
+        setStatusReason("");
+      } else {
+        alert("Fehler beim Aktualisieren des Status");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Fehler beim Aktualisieren des Status");
+    }
+  };
+
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: "EUR",
+    }).format(num);
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("de-DE");
+  };
+
+  // Statistics
+  const stats = {
+    total: contracts.length,
+    active: contracts.filter((c) => c.status === "active").length,
+    pendingPayment: contracts.filter((c) => c.status === "pending_payment").length,
+    withdrawn: contracts.filter((c) => c.status === "withdrawal").length,
+    totalValue: contracts
+      .filter((c) => c.status === "active" || c.status === "completed")
+      .reduce((sum, c) => sum + parseFloat(c.purchasePrice || "0"), 0),
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4A052] mx-auto mb-4"></div>
+        <p className="text-gray-600">Verträge werden geladen...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold text-gray-900">📝 Kaufverträge</h2>
+        <button
+          onClick={fetchContracts}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+        >
+          🔄 Aktualisieren
+        </button>
+      </div>
+
+      {/* Statistics */}
+      <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          <p className="text-sm text-gray-500">Gesamt</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-4">
+          <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+          <p className="text-sm text-gray-500">Aktiv</p>
+        </div>
+        <div className="bg-orange-50 rounded-lg p-4">
+          <p className="text-2xl font-bold text-orange-600">{stats.pendingPayment}</p>
+          <p className="text-sm text-gray-500">Warte auf Zahlung</p>
+        </div>
+        <div className="bg-red-50 rounded-lg p-4">
+          <p className="text-2xl font-bold text-red-600">{stats.withdrawn}</p>
+          <p className="text-sm text-gray-500">Widerrufen</p>
+        </div>
+        <div className="bg-[#C4A052]/10 rounded-lg p-4">
+          <p className="text-2xl font-bold text-[#C4A052]">{formatCurrency(stats.totalValue)}</p>
+          <p className="text-sm text-gray-500">Gesamtwert</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-4 mb-6">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Suche nach Vertragsnummer, Name oder Immobilie..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+        >
+          <option value="all">Alle Status</option>
+          <option value="draft">Entwurf</option>
+          <option value="pending_payment">Warte auf Zahlung</option>
+          <option value="active">Aktiv</option>
+          <option value="completed">Abgeschlossen</option>
+          <option value="withdrawal">Widerrufen</option>
+          <option value="cancelled">Storniert</option>
+          <option value="converted">Umgewandelt</option>
+        </select>
+      </div>
+
+      {/* Contracts Table */}
+      {filteredContracts.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          Keine Verträge gefunden
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vertragsnr.</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Käufer</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Immobilie</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kaufpreis</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Anzahlung</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredContracts.map((contract) => (
+                <tr key={contract.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 whitespace-nowrap font-mono text-sm">
+                    {contract.contractNumber}
+                  </td>
+                  <td className="px-4 py-4">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {contract.buyerFirstName} {contract.buyerLastName}
+                      </p>
+                      <p className="text-sm text-gray-500">{contract.buyerEmail}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="max-w-[200px]">
+                      <p className="font-medium text-gray-900 truncate">{contract.propertyTitle}</p>
+                      <p className="text-sm text-gray-500">{contract.propertyLocation}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap font-medium">
+                    {formatCurrency(contract.purchasePrice)}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div>
+                      <p>{formatCurrency(contract.downPaymentAmount)}</p>
+                      <p className="text-sm text-gray-500">({contract.downPaymentPercent}%)</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[contract.status] || "bg-gray-100"}`}>
+                      {statusLabels[contract.status] || contract.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(contract.createdAt)}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedContract(contract);
+                          setShowDetailModal(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900"
+                        title="Details anzeigen"
+                      >
+                        👁️
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedContract(contract);
+                          setNewStatus(contract.status);
+                          setShowStatusModal(true);
+                        }}
+                        className="text-gray-600 hover:text-gray-900"
+                        title="Status ändern"
+                      >
+                        ✏️
+                      </button>
+                      {contract.contractPdfUrl && (
+                        <a
+                          href={contract.contractPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-600 hover:text-gray-900"
+                          title="PDF herunterladen"
+                        >
+                          📄
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold">Vertragsdetails</h3>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedContract(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Status */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[selectedContract.status]}`}>
+                    {statusLabels[selectedContract.status]}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Erstellt am</p>
+                  <p className="font-medium">{formatDate(selectedContract.createdAt)}</p>
+                </div>
+              </div>
+
+              {/* Buyer Info */}
+              <div>
+                <h4 className="font-semibold mb-2">👤 Käuferinformationen</h4>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="font-medium">{selectedContract.buyerFirstName} {selectedContract.buyerLastName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">E-Mail</p>
+                    <p className="font-medium">{selectedContract.buyerEmail}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Telefon</p>
+                    <p className="font-medium">{selectedContract.buyerPhone || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Ausweis</p>
+                    <p className="font-medium">{selectedContract.buyerIdType}: {selectedContract.buyerIdNumber || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Property Info */}
+              <div>
+                <h4 className="font-semibold mb-2">🏠 Immobilie</h4>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">Titel</p>
+                    <p className="font-medium">{selectedContract.propertyTitle}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Standort</p>
+                    <p className="font-medium">{selectedContract.propertyLocation}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Fläche</p>
+                    <p className="font-medium">{selectedContract.propertyArea} m²</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Info */}
+              <div>
+                <h4 className="font-semibold mb-2">💰 Zahlungsinformationen</h4>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm text-gray-500">Kaufpreis</p>
+                    <p className="font-medium text-lg">{formatCurrency(selectedContract.purchasePrice)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Anzahlung</p>
+                    <p className="font-medium text-lg">
+                      {formatCurrency(selectedContract.downPaymentAmount)}
+                      <span className="text-sm text-gray-500 ml-1">({selectedContract.downPaymentPercent}%)</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Restbetrag</p>
+                    <p className="font-medium">{formatCurrency(selectedContract.remainingAmount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Zahlungsplan</p>
+                    <p className="font-medium">
+                      {selectedContract.paymentPlan === "installment"
+                        ? `Ratenzahlung (${selectedContract.installmentMonths} Monate)`
+                        : "Vollzahlung"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Signature */}
+              {selectedContract.buyerSignature && (
+                <div>
+                  <h4 className="font-semibold mb-2">✍️ Unterschrift</h4>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <img
+                      src={selectedContract.buyerSignature}
+                      alt="Käufer-Unterschrift"
+                      className="max-h-20 border border-gray-200 rounded"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Unterschrieben am: {formatDate(selectedContract.buyerSignedAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Withdrawal Info */}
+              {selectedContract.status === "withdrawal" && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <h4 className="font-semibold text-red-800 mb-2">⚠️ Widerruf</h4>
+                  <p className="text-sm text-red-700">{selectedContract.withdrawalReason || "Kein Grund angegeben"}</p>
+                  <p className="text-xs text-red-600 mt-1">
+                    Widerrufen am: {formatDate(selectedContract.withdrawalRequestedAt)}
+                  </p>
+                </div>
+              )}
+
+              {/* PDF Download */}
+              {selectedContract.contractPdfUrl && (
+                <div className="flex justify-end">
+                  <a
+                    href={selectedContract.contractPdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142]"
+                  >
+                    📄 Vertrag als PDF herunterladen
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Update Modal */}
+      {showStatusModal && selectedContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold">Status ändern</h3>
+              <button
+                onClick={() => {
+                  setShowStatusModal(false);
+                  setSelectedContract(null);
+                  setNewStatus("");
+                  setStatusReason("");
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Neuer Status</label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                >
+                  <option value="draft">Entwurf</option>
+                  <option value="pending_payment">Warte auf Zahlung</option>
+                  <option value="active">Aktiv</option>
+                  <option value="completed">Abgeschlossen</option>
+                  <option value="withdrawal">Widerrufen</option>
+                  <option value="cancelled">Storniert</option>
+                  <option value="converted">Umgewandelt</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grund (optional)</label>
+                <textarea
+                  value={statusReason}
+                  onChange={(e) => setStatusReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  rows={3}
+                  placeholder="Grund für die Statusänderung..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setSelectedContract(null);
+                    setNewStatus("");
+                    setStatusReason("");
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142]"
+                >
+                  Status aktualisieren
+                </button>
+              </div>
             </div>
           </div>
         </div>

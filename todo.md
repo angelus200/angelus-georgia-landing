@@ -349,3 +349,6 @@
 - [x] Admin-Dashboard für Vertragsverwaltung
 - [x] 14-Tage-Widerrufsbelehrung implementieren
 - [x] Vertrags-Download im Kunden-Dashboard
+
+## Verträge-Tab im AdminDirect
+- [x] Verträge-Tab zu AdminDirect.tsx hinzufügen
