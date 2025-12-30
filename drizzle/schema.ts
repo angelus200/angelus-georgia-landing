@@ -759,3 +759,166 @@ export const interestCalculations = mysqlTable("interest_calculations", {
 
 export type InterestCalculation = typeof interestCalculations.$inferSelect;
 export type InsertInterestCalculation = typeof interestCalculations.$inferInsert;
+
+
+/**
+ * ============================================
+ * PURCHASE CONTRACT SYSTEM
+ * ============================================
+ */
+
+/**
+ * Purchase contracts table - Pre-contracts (Vorvertrag) for property purchases
+ * Based on Georgian law with 14-day withdrawal period
+ */
+export const purchaseContracts = mysqlTable("purchase_contracts", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Contract number (auto-generated) */
+  contractNumber: varchar("contractNumber", { length: 50 }).notNull().unique(),
+  /** Buyer (user) */
+  userId: int("userId").notNull(),
+  /** Property being purchased */
+  propertyId: int("propertyId").notNull(),
+  
+  /** Contract type */
+  contractType: mysqlEnum("contractType", ["pre_contract", "notary_contract"]).default("pre_contract").notNull(),
+  
+  /** Buyer information (snapshot at contract time) */
+  buyerFirstName: varchar("buyerFirstName", { length: 100 }).notNull(),
+  buyerLastName: varchar("buyerLastName", { length: 100 }).notNull(),
+  buyerEmail: varchar("buyerEmail", { length: 320 }).notNull(),
+  buyerPhone: varchar("buyerPhone", { length: 50 }),
+  buyerAddress: text("buyerAddress"),
+  buyerIdType: mysqlEnum("buyerIdType", ["passport", "id_card", "drivers_license"]),
+  buyerIdNumber: varchar("buyerIdNumber", { length: 100 }),
+  buyerDateOfBirth: timestamp("buyerDateOfBirth"),
+  buyerNationality: varchar("buyerNationality", { length: 100 }),
+  
+  /** Property information (snapshot at contract time) */
+  propertyTitle: varchar("propertyTitle", { length: 255 }).notNull(),
+  propertyLocation: varchar("propertyLocation", { length: 255 }).notNull(),
+  propertyCity: varchar("propertyCity", { length: 100 }).notNull(),
+  propertyArea: decimal("propertyArea", { precision: 10, scale: 2 }).notNull(),
+  
+  /** Financial terms */
+  purchasePrice: decimal("purchasePrice", { precision: 15, scale: 2 }).notNull(),
+  downPaymentPercent: decimal("downPaymentPercent", { precision: 5, scale: 2 }).notNull(),
+  downPaymentAmount: decimal("downPaymentAmount", { precision: 15, scale: 2 }).notNull(),
+  remainingAmount: decimal("remainingAmount", { precision: 15, scale: 2 }).notNull(),
+  
+  /** Payment plan */
+  paymentPlan: mysqlEnum("paymentPlan", ["full", "installment"]).default("installment").notNull(),
+  installmentMonths: int("installmentMonths"),
+  monthlyInstallment: decimal("monthlyInstallment", { precision: 15, scale: 2 }),
+  interestRate: decimal("interestRate", { precision: 5, scale: 2 }).default("0.00"),
+  
+  /** Expected completion date (for pre-contracts) */
+  expectedCompletionDate: timestamp("expectedCompletionDate"),
+  
+  /** Digital signature */
+  buyerSignature: text("buyerSignature"), // Base64 encoded signature image
+  buyerSignedAt: timestamp("buyerSignedAt"),
+  buyerSignedIp: varchar("buyerSignedIp", { length: 50 }),
+  
+  /** Seller signature (admin) */
+  sellerSignature: text("sellerSignature"),
+  sellerSignedAt: timestamp("sellerSignedAt"),
+  sellerSignedBy: int("sellerSignedBy"), // Admin user ID
+  
+  /** Contract status */
+  status: mysqlEnum("status", [
+    "draft",           // Contract created but not signed
+    "pending_payment", // Signed, waiting for down payment
+    "active",          // Down payment received, contract active
+    "withdrawal",      // Buyer exercised withdrawal right (14 days)
+    "completed",       // Property delivered, final payment made
+    "cancelled",       // Contract cancelled
+    "converted"        // Converted to notary contract
+  ]).default("draft").notNull(),
+  
+  /** Withdrawal period */
+  withdrawalDeadline: timestamp("withdrawalDeadline"), // 14 days from signing
+  withdrawalRequestedAt: timestamp("withdrawalRequestedAt"),
+  withdrawalReason: text("withdrawalReason"),
+  
+  /** Payment tracking */
+  downPaymentPaidAt: timestamp("downPaymentPaidAt"),
+  downPaymentTransactionId: int("downPaymentTransactionId"),
+  
+  /** PDF document */
+  contractPdfUrl: varchar("contractPdfUrl", { length: 500 }),
+  contractPdfKey: varchar("contractPdfKey", { length: 500 }),
+  
+  /** Notary contract reference (when converted) */
+  notaryContractId: int("notaryContractId"),
+  notaryDate: timestamp("notaryDate"),
+  notaryName: varchar("notaryName", { length: 255 }),
+  notaryNumber: varchar("notaryNumber", { length: 100 }),
+  
+  /** Additional terms */
+  specialConditions: text("specialConditions"),
+  notes: text("notes"),
+  adminNotes: text("adminNotes"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PurchaseContract = typeof purchaseContracts.$inferSelect;
+export type InsertPurchaseContract = typeof purchaseContracts.$inferInsert;
+
+/**
+ * Contract documents table - Additional documents attached to contracts
+ */
+export const contractDocuments = mysqlTable("contract_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  contractId: int("contractId").notNull(),
+  /** Document type */
+  documentType: mysqlEnum("documentType", [
+    "id_copy",
+    "proof_of_address",
+    "payment_receipt",
+    "notary_draft",
+    "notary_final",
+    "property_document",
+    "other"
+  ]).notNull(),
+  /** Document title */
+  title: varchar("title", { length: 255 }).notNull(),
+  /** File URL */
+  fileUrl: varchar("fileUrl", { length: 500 }).notNull(),
+  /** S3 key */
+  s3Key: varchar("s3Key", { length: 500 }),
+  /** File size in bytes */
+  fileSize: int("fileSize"),
+  /** MIME type */
+  mimeType: varchar("mimeType", { length: 100 }),
+  /** Uploaded by */
+  uploadedBy: int("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ContractDocument = typeof contractDocuments.$inferSelect;
+export type InsertContractDocument = typeof contractDocuments.$inferInsert;
+
+/**
+ * Contract status history - Audit trail for contract changes
+ */
+export const contractStatusHistory = mysqlTable("contract_status_history", {
+  id: int("id").autoincrement().primaryKey(),
+  contractId: int("contractId").notNull(),
+  /** Previous status */
+  fromStatus: varchar("fromStatus", { length: 50 }),
+  /** New status */
+  toStatus: varchar("toStatus", { length: 50 }).notNull(),
+  /** Changed by user */
+  changedBy: int("changedBy"),
+  /** Change reason/notes */
+  reason: text("reason"),
+  /** IP address */
+  ipAddress: varchar("ipAddress", { length: 50 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ContractStatusHistory = typeof contractStatusHistory.$inferSelect;
+export type InsertContractStatusHistory = typeof contractStatusHistory.$inferInsert;

@@ -337,3 +337,15 @@
 - [x] Bildupload-Komponente mit S3-Speicherung im Immobilien-Formular
 - [x] Video-Upload-Funktionalität hinzufügen
 - [x] URL-Eingabefelder durch Upload-Komponenten ersetzen
+
+## Immobilienkaufprozess mit Vorvertrag
+- [x] Datenbankschema für Kaufverträge (purchaseContracts) erstellen
+- [x] Vorvertrags-Template nach georgischem Recht erstellen
+- [x] Backend-API für Vertragsmanagement (CRUD, Signatur, Status)
+- [x] Digitale Signatur-Komponente mit Canvas entwickeln
+- [x] Kaufprozess-UI im Frontend (Vertragsansicht, Signatur, Bestätigung)
+- [x] PDF-Generierung für signierte Verträge
+- [x] Wallet-Integration für Anzahlung bei Vertragsabschluss
+- [x] Admin-Dashboard für Vertragsverwaltung
+- [x] 14-Tage-Widerrufsbelehrung implementieren
+- [x] Vertrags-Download im Kunden-Dashboard

@@ -30,6 +30,7 @@ import CRM from "./pages/CRM";
 import Videos from "./pages/Videos";
 import InvestmentTest from "./pages/InvestmentTest";
 import Wallet from "./pages/Wallet";
+import PurchaseContract from "./pages/PurchaseContract";
 import Chatbot from "./components/Chatbot";
 import { CalendlyButton } from "./components/CalendlyPopup";
 import CookieConsent from "./components/CookieConsent";
@@ -89,6 +90,7 @@ function Router() {
       <Route path={"/videos"} component={Videos} />
       <Route path={"/investment-test"} component={InvestmentTest} />
       <Route path={"/wallet"} component={Wallet} />
+      <Route path={"/kaufvertrag/:propertyId"} component={PurchaseContract} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

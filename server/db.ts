@@ -38,7 +38,16 @@ import {
   InsertDepositRequest,
   interestCalculations,
   InterestCalculation,
-  InsertInterestCalculation
+  InsertInterestCalculation,
+  purchaseContracts,
+  PurchaseContract,
+  InsertPurchaseContract,
+  contractDocuments,
+  ContractDocument,
+  InsertContractDocument,
+  contractStatusHistory,
+  ContractStatusHistory,
+  InsertContractStatusHistory
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -2316,31 +2325,32 @@ export async function calculateAndCreditInterest(walletId: number): Promise<{ cr
  * Use wallet balance for purchase
  */
 export async function useWalletForPurchase(
-  walletId: number,
   userId: number,
   amount: number,
-  orderId: number,
-  description: string
-): Promise<{ success: boolean; mainUsed: number; bonusUsed: number }> {
+  orderId?: number,
+  description?: string
+): Promise<{ success: boolean; mainUsed: number; bonusUsed: number; transactionId?: number; error?: string }> {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  if (!db) return { success: false, mainUsed: 0, bonusUsed: 0, error: "Database not available" };
 
   try {
+    // Get wallet by userId
     const wallet = await db.select()
       .from(customerWallets)
-      .where(eq(customerWallets.id, walletId))
+      .where(eq(customerWallets.userId, userId))
       .limit(1);
 
     if (!wallet[0]) {
-      throw new Error("Wallet not found");
+      return { success: false, mainUsed: 0, bonusUsed: 0, error: "Wallet not found" };
     }
 
+    const walletId = wallet[0].id;
     const mainBalance = parseFloat(wallet[0].balance || "0");
     const bonusBalance = parseFloat(wallet[0].bonusBalance || "0");
     const totalAvailable = mainBalance + bonusBalance;
 
     if (totalAvailable < amount) {
-      throw new Error("Insufficient wallet balance");
+      return { success: false, mainUsed: 0, bonusUsed: 0, error: "Nicht genügend Guthaben" };
     }
 
     // Use bonus balance first, then main balance
@@ -2366,9 +2376,11 @@ export async function useWalletForPurchase(
       })
       .where(eq(customerWallets.id, walletId));
 
+    let lastTransactionId: number | undefined;
+
     // Create transaction record for main balance usage
     if (mainUsed > 0) {
-      await db.insert(walletTransactions).values({
+      const result = await db.insert(walletTransactions).values({
         walletId,
         userId,
         type: "purchase",
@@ -2379,11 +2391,12 @@ export async function useWalletForPurchase(
         status: "completed",
         description,
       });
+      lastTransactionId = Number(result[0].insertId);
     }
 
     // Create transaction record for bonus balance usage
     if (bonusUsed > 0) {
-      await db.insert(walletTransactions).values({
+      const result = await db.insert(walletTransactions).values({
         walletId,
         userId,
         type: "bonus_used",
@@ -2394,11 +2407,439 @@ export async function useWalletForPurchase(
         status: "completed",
         description: `Bonus-Guthaben verwendet: ${description}`,
       });
+      lastTransactionId = Number(result[0].insertId);
     }
-
-    return { success: true, mainUsed, bonusUsed };
-  } catch (error) {
+    
+    return { success: true, mainUsed, bonusUsed, transactionId: lastTransactionId };
+  } catch (error: any) {
     console.error("[Database] Failed to use wallet for purchase:", error);
+    return { success: false, mainUsed: 0, bonusUsed: 0, error: error.message };
+  }
+}
+
+
+// ============================================
+// PURCHASE CONTRACTS
+// ============================================
+
+/**
+ * Generate unique contract number
+ */
+export function generateContractNumber(): string {
+  const now = new Date();
+  const dateStr = now.getFullYear().toString() +
+    (now.getMonth() + 1).toString().padStart(2, '0') +
+    now.getDate().toString().padStart(2, '0');
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `AMG-${dateStr}-${random}`;
+}
+
+/**
+ * Create a new purchase contract
+ */
+export async function createPurchaseContract(contract: Omit<InsertPurchaseContract, 'contractNumber'>): Promise<{ contractId: number; contractNumber: string }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    const contractNumber = generateContractNumber();
+    const result = await db.insert(purchaseContracts).values({
+      ...contract,
+      contractNumber,
+    });
+    const contractId = Number(result[0].insertId);
+    
+    // Create status history entry
+    await db.insert(contractStatusHistory).values({
+      contractId,
+      toStatus: contract.status || "draft",
+      changedBy: contract.userId,
+      reason: "Vertrag erstellt",
+    });
+    
+    return { contractId, contractNumber };
+  } catch (error) {
+    console.error("[Database] Failed to create purchase contract:", error);
     throw error;
+  }
+}
+
+/**
+ * Get purchase contract by ID
+ */
+export async function getPurchaseContractById(id: number): Promise<PurchaseContract | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select()
+      .from(purchaseContracts)
+      .where(eq(purchaseContracts.id, id))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get purchase contract:", error);
+    return null;
+  }
+}
+
+/**
+ * Get purchase contract by contract number
+ */
+export async function getPurchaseContractByNumber(contractNumber: string): Promise<PurchaseContract | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select()
+      .from(purchaseContracts)
+      .where(eq(purchaseContracts.contractNumber, contractNumber))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get purchase contract by number:", error);
+    return null;
+  }
+}
+
+/**
+ * Get all purchase contracts for a user
+ */
+export async function getPurchaseContractsByUserId(userId: number): Promise<PurchaseContract[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(purchaseContracts)
+      .where(eq(purchaseContracts.userId, userId))
+      .orderBy(desc(purchaseContracts.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get purchase contracts by user:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all purchase contracts (admin)
+ */
+export async function getAllPurchaseContracts(): Promise<PurchaseContract[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(purchaseContracts)
+      .orderBy(desc(purchaseContracts.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get all purchase contracts:", error);
+    return [];
+  }
+}
+
+/**
+ * Update purchase contract
+ */
+export async function updatePurchaseContract(
+  id: number, 
+  updates: Partial<InsertPurchaseContract>,
+  changedBy?: number,
+  reason?: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Get current contract for status history
+    const current = await getPurchaseContractById(id);
+    
+    await db.update(purchaseContracts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(purchaseContracts.id, id));
+    
+    // If status changed, create history entry
+    if (updates.status && current && updates.status !== current.status) {
+      await db.insert(contractStatusHistory).values({
+        contractId: id,
+        fromStatus: current.status,
+        toStatus: updates.status,
+        changedBy,
+        reason,
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update purchase contract:", error);
+    return false;
+  }
+}
+
+/**
+ * Sign contract (buyer)
+ */
+export async function signContractBuyer(
+  id: number,
+  signature: string,
+  ipAddress: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    const now = new Date();
+    const withdrawalDeadline = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days
+    
+    await db.update(purchaseContracts)
+      .set({
+        buyerSignature: signature,
+        buyerSignedAt: now,
+        buyerSignedIp: ipAddress,
+        status: "pending_payment",
+        withdrawalDeadline,
+        updatedAt: now,
+      })
+      .where(eq(purchaseContracts.id, id));
+    
+    // Create status history
+    await db.insert(contractStatusHistory).values({
+      contractId: id,
+      fromStatus: "draft",
+      toStatus: "pending_payment",
+      reason: "Käufer hat unterschrieben",
+      ipAddress,
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to sign contract:", error);
+    return false;
+  }
+}
+
+/**
+ * Sign contract (seller/admin)
+ */
+export async function signContractSeller(
+  id: number,
+  signature: string,
+  adminUserId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(purchaseContracts)
+      .set({
+        sellerSignature: signature,
+        sellerSignedAt: new Date(),
+        sellerSignedBy: adminUserId,
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseContracts.id, id));
+    
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to sign contract (seller):", error);
+    return false;
+  }
+}
+
+/**
+ * Process contract payment (from wallet)
+ */
+export async function processContractPayment(
+  contractId: number,
+  transactionId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    const contract = await getPurchaseContractById(contractId);
+    if (!contract) return false;
+    
+    await db.update(purchaseContracts)
+      .set({
+        status: "active",
+        downPaymentPaidAt: new Date(),
+        downPaymentTransactionId: transactionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseContracts.id, contractId));
+    
+    // Create status history
+    await db.insert(contractStatusHistory).values({
+      contractId,
+      fromStatus: "pending_payment",
+      toStatus: "active",
+      reason: "Anzahlung erhalten",
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to process contract payment:", error);
+    return false;
+  }
+}
+
+/**
+ * Request withdrawal (within 14 days)
+ */
+export async function requestContractWithdrawal(
+  contractId: number,
+  reason: string
+): Promise<{ success: boolean; error?: string }> {
+  const db = await getDb();
+  if (!db) return { success: false, error: "Database not available" };
+
+  try {
+    const contract = await getPurchaseContractById(contractId);
+    if (!contract) {
+      return { success: false, error: "Vertrag nicht gefunden" };
+    }
+    
+    // Check if withdrawal is still allowed
+    if (contract.withdrawalDeadline && new Date() > contract.withdrawalDeadline) {
+      return { success: false, error: "Widerrufsfrist abgelaufen" };
+    }
+    
+    if (contract.status !== "active" && contract.status !== "pending_payment") {
+      return { success: false, error: "Widerruf nicht möglich für diesen Vertragsstatus" };
+    }
+    
+    await db.update(purchaseContracts)
+      .set({
+        status: "withdrawal",
+        withdrawalRequestedAt: new Date(),
+        withdrawalReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseContracts.id, contractId));
+    
+    // Create status history
+    await db.insert(contractStatusHistory).values({
+      contractId,
+      fromStatus: contract.status,
+      toStatus: "withdrawal",
+      reason: `Widerruf: ${reason}`,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error("[Database] Failed to request withdrawal:", error);
+    return { success: false, error: "Fehler beim Widerruf" };
+  }
+}
+
+/**
+ * Get contract status history
+ */
+export async function getContractStatusHistory(contractId: number): Promise<ContractStatusHistory[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(contractStatusHistory)
+      .where(eq(contractStatusHistory.contractId, contractId))
+      .orderBy(desc(contractStatusHistory.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get contract status history:", error);
+    return [];
+  }
+}
+
+/**
+ * Add document to contract
+ */
+export async function addContractDocument(document: InsertContractDocument): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(contractDocuments).values(document);
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error("[Database] Failed to add contract document:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get contract documents
+ */
+export async function getContractDocuments(contractId: number): Promise<ContractDocument[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(contractDocuments)
+      .where(eq(contractDocuments.contractId, contractId))
+      .orderBy(desc(contractDocuments.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get contract documents:", error);
+    return [];
+  }
+}
+
+/**
+ * Delete contract document
+ */
+export async function deleteContractDocument(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.delete(contractDocuments).where(eq(contractDocuments.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete contract document:", error);
+    return false;
+  }
+}
+
+/**
+ * Get contracts by property ID
+ */
+export async function getContractsByPropertyId(propertyId: number): Promise<PurchaseContract[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(purchaseContracts)
+      .where(eq(purchaseContracts.propertyId, propertyId))
+      .orderBy(desc(purchaseContracts.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get contracts by property:", error);
+    return [];
+  }
+}
+
+/**
+ * Update contract PDF
+ */
+export async function updateContractPdf(
+  contractId: number,
+  pdfUrl: string,
+  pdfKey: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(purchaseContracts)
+      .set({
+        contractPdfUrl: pdfUrl,
+        contractPdfKey: pdfKey,
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseContracts.id, contractId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update contract PDF:", error);
+    return false;
   }
 }

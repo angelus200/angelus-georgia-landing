@@ -37,6 +37,7 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { ImageUpload } from "@/components/ImageUpload";
+import { ContractsAdminTab } from "@/components/ContractsAdminTab";
 import { 
   Loader2, 
   Mail, 
@@ -55,7 +56,11 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileText,
+  Download,
+  AlertTriangle,
+  Clock
 } from "lucide-react";
 
 type ContactStatus = "new" | "contacted" | "closed";
@@ -481,12 +486,16 @@ export default function Admin() {
       {/* Main Content */}
       <main className="container py-8">
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="contacts">Kontaktanfragen</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
             <TabsTrigger value="services">Dienstleistungen</TabsTrigger>
             <TabsTrigger value="bookings">Buchungen</TabsTrigger>
             <TabsTrigger value="wallets">Wallets</TabsTrigger>
+            <TabsTrigger value="contracts" className="bg-amber-100 text-amber-800">
+              <FileText className="h-4 w-4 mr-1" />
+              Verträge
+            </TabsTrigger>
             <TabsTrigger value="crm" className="bg-primary/10 text-primary">
               <BarChart3 className="h-4 w-4 mr-1" />
               CRM
@@ -1826,6 +1835,11 @@ export default function Admin() {
                 </div>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+
+          {/* Contracts Tab */}
+          <TabsContent value="contracts" className="space-y-6">
+            <ContractsAdminTab />
           </TabsContent>
 
           {/* CRM Tab */}

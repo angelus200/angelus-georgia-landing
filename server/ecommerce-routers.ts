@@ -254,7 +254,6 @@ export const ordersRouter = router({
       if (walletPaymentData) {
         const { useWalletForPurchase, updateOrderStatus } = await import("./db");
         await useWalletForPurchase(
-          walletPaymentData.walletId,
           walletPaymentData.userId,
           walletPaymentData.amount,
           orderId,

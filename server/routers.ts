@@ -68,7 +68,25 @@ import {
   useWalletForPurchase,
   getAllWallets,
   getWalletsQualifyingForInterest,
-  getInterestCalculationsByWalletId
+  getInterestCalculationsByWalletId,
+  // Contract functions
+  generateContractNumber,
+  createPurchaseContract,
+  getPurchaseContractById,
+  getPurchaseContractByNumber,
+  getPurchaseContractsByUserId,
+  getAllPurchaseContracts,
+  updatePurchaseContract,
+  signContractBuyer,
+  signContractSeller,
+  processContractPayment,
+  requestContractWithdrawal,
+  getContractStatusHistory,
+  addContractDocument,
+  getContractDocuments,
+  deleteContractDocument,
+  getContractsByPropertyId,
+  updateContractPdf
 } from "./db";
 import {
   servicesRouter,
@@ -1495,6 +1513,456 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return await deleteVideo(input.id);
+      }),
+  }),
+
+  // ==================== PURCHASE CONTRACTS ROUTER ====================
+  contracts: router({
+    // Create a new contract (user)
+    create: protectedProcedure
+      .input(z.object({
+        propertyId: z.number(),
+        // Buyer info
+        buyerFirstName: z.string().min(1),
+        buyerLastName: z.string().min(1),
+        buyerEmail: z.string().email(),
+        buyerPhone: z.string().optional(),
+        buyerAddress: z.string().optional(),
+        buyerIdType: z.enum(["passport", "id_card", "drivers_license"]).optional(),
+        buyerIdNumber: z.string().optional(),
+        buyerDateOfBirth: z.string().optional(),
+        buyerNationality: z.string().optional(),
+        // Financial terms
+        downPaymentPercent: z.number().min(10).max(100),
+        // Payment plan
+        paymentPlan: z.enum(["full", "installment"]),
+        installmentMonths: z.number().optional(),
+        // Special conditions
+        specialConditions: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("Nicht autorisiert");
+        }
+
+        // Get property details
+        const property = await getPropertyById(input.propertyId);
+        if (!property) {
+          throw new Error("Immobilie nicht gefunden");
+        }
+
+        const purchasePrice = parseFloat(property.price);
+        const downPaymentAmount = (purchasePrice * input.downPaymentPercent) / 100;
+        const remainingAmount = purchasePrice - downPaymentAmount;
+        
+        let monthlyInstallment = null;
+        if (input.paymentPlan === "installment" && input.installmentMonths) {
+          monthlyInstallment = remainingAmount / input.installmentMonths;
+        }
+
+        const result = await createPurchaseContract({
+          userId: ctx.user.id,
+          propertyId: input.propertyId,
+          contractType: "pre_contract",
+          // Buyer info
+          buyerFirstName: input.buyerFirstName,
+          buyerLastName: input.buyerLastName,
+          buyerEmail: input.buyerEmail,
+          buyerPhone: input.buyerPhone,
+          buyerAddress: input.buyerAddress,
+          buyerIdType: input.buyerIdType,
+          buyerIdNumber: input.buyerIdNumber,
+          buyerDateOfBirth: input.buyerDateOfBirth ? new Date(input.buyerDateOfBirth) : undefined,
+          buyerNationality: input.buyerNationality,
+          // Property info (snapshot)
+          propertyTitle: property.title,
+          propertyLocation: property.location,
+          propertyCity: property.city,
+          propertyArea: property.area,
+          // Financial terms
+          purchasePrice: purchasePrice.toFixed(2),
+          downPaymentPercent: input.downPaymentPercent.toFixed(2),
+          downPaymentAmount: downPaymentAmount.toFixed(2),
+          remainingAmount: remainingAmount.toFixed(2),
+          // Payment plan
+          paymentPlan: input.paymentPlan,
+          installmentMonths: input.installmentMonths,
+          monthlyInstallment: monthlyInstallment?.toFixed(2),
+          interestRate: property.installmentInterestRate || "0.00",
+          // Dates
+          expectedCompletionDate: property.completionDate,
+          // Special conditions
+          specialConditions: input.specialConditions,
+          status: "draft",
+        });
+
+        return { contractId: result.contractId, contractNumber: result.contractNumber };
+      }),
+
+    // Generate contract PDF
+    generatePdf: protectedProcedure
+      .input(z.object({ contractId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) {
+          throw new Error("Vertrag nicht gefunden");
+        }
+        
+        if (contract.userId !== ctx.user?.id && ctx.user?.role !== "admin") {
+          throw new Error("Nicht autorisiert");
+        }
+
+        // Import contract template and PDF generator
+        const { generateContractHtml, formatDate } = await import("../client/src/lib/contractTemplate");
+        const { generateContractPdf } = await import("./pdf-generator");
+
+        // Generate HTML
+        const withdrawalDeadline = contract.withdrawalDeadline 
+          ? contract.withdrawalDeadline.toISOString()
+          : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+        const html = generateContractHtml({
+          contractNumber: contract.contractNumber,
+          contractDate: contract.createdAt.toISOString(),
+          buyerFirstName: contract.buyerFirstName,
+          buyerLastName: contract.buyerLastName,
+          buyerEmail: contract.buyerEmail,
+          buyerPhone: contract.buyerPhone || undefined,
+          buyerAddress: contract.buyerAddress || undefined,
+          buyerIdType: contract.buyerIdType || undefined,
+          buyerIdNumber: contract.buyerIdNumber || undefined,
+          buyerDateOfBirth: contract.buyerDateOfBirth?.toISOString(),
+          buyerNationality: contract.buyerNationality || undefined,
+          propertyTitle: contract.propertyTitle,
+          propertyLocation: contract.propertyLocation,
+          propertyCity: contract.propertyCity,
+          propertyArea: parseFloat(contract.propertyArea),
+          purchasePrice: parseFloat(contract.purchasePrice),
+          downPaymentPercent: parseFloat(contract.downPaymentPercent),
+          downPaymentAmount: parseFloat(contract.downPaymentAmount),
+          remainingAmount: parseFloat(contract.remainingAmount),
+          paymentPlan: contract.paymentPlan as "full" | "installment",
+          installmentMonths: contract.installmentMonths || undefined,
+          monthlyInstallment: contract.monthlyInstallment ? parseFloat(contract.monthlyInstallment) : undefined,
+          interestRate: contract.interestRate ? parseFloat(contract.interestRate) : undefined,
+          expectedCompletionDate: contract.expectedCompletionDate?.toISOString(),
+          withdrawalDeadline,
+          specialConditions: contract.specialConditions || undefined,
+        });
+
+        // Generate PDF
+        const { url, key } = await generateContractPdf(contract.contractNumber, html);
+
+        // Update contract with PDF URL
+        await updateContractPdf(input.contractId, url, key);
+
+        return { pdfUrl: url };
+      }),
+
+    // Get user's contracts
+    myContracts: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (!ctx.user?.id) {
+          return [];
+        }
+        return await getPurchaseContractsByUserId(ctx.user.id);
+      }),
+
+    // Get all contracts (admin only)
+    getAllAdmin: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Admin access required");
+        }
+        return await getAllPurchaseContracts();
+      }),
+
+    // Get contract by ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractById(input.id);
+        if (!contract) return null;
+        
+        // Only allow owner or admin to view
+        if (contract.userId !== ctx.user?.id && ctx.user?.role !== "admin") {
+          throw new Error("Nicht autorisiert");
+        }
+        
+        return contract;
+      }),
+
+    // Get contract by number
+    getByNumber: protectedProcedure
+      .input(z.object({ contractNumber: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractByNumber(input.contractNumber);
+        if (!contract) return null;
+        
+        // Only allow owner or admin to view
+        if (contract.userId !== ctx.user?.id && ctx.user?.role !== "admin") {
+          throw new Error("Nicht autorisiert");
+        }
+        
+        return contract;
+      }),
+
+    // Sign contract (buyer)
+    sign: protectedProcedure
+      .input(z.object({
+        contractId: z.number(),
+        signature: z.string().min(1), // Base64 encoded signature
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) {
+          throw new Error("Vertrag nicht gefunden");
+        }
+        
+        if (contract.userId !== ctx.user?.id) {
+          throw new Error("Nicht autorisiert");
+        }
+        
+        if (contract.status !== "draft") {
+          throw new Error("Vertrag kann nicht mehr unterschrieben werden");
+        }
+
+        // Get IP address (simplified)
+        const ipAddress = "0.0.0.0";
+        
+        const success = await signContractBuyer(input.contractId, input.signature, ipAddress);
+        if (!success) {
+          throw new Error("Fehler beim Unterschreiben");
+        }
+
+        return { success: true };
+      }),
+
+    // Pay down payment from wallet
+    payDownPayment: protectedProcedure
+      .input(z.object({
+        contractId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("Nicht autorisiert");
+        }
+
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) {
+          throw new Error("Vertrag nicht gefunden");
+        }
+        
+        if (contract.userId !== ctx.user.id) {
+          throw new Error("Nicht autorisiert");
+        }
+        
+        if (contract.status !== "pending_payment") {
+          throw new Error("Vertrag ist nicht im Zahlungsstatus");
+        }
+
+        const downPaymentAmount = parseFloat(contract.downPaymentAmount);
+        
+        // Use wallet for payment
+        const paymentResult = await useWalletForPurchase(
+          ctx.user.id,
+          downPaymentAmount,
+          undefined, // no order ID
+          `Anzahlung für Vertrag ${contract.contractNumber}`
+        );
+
+        if (!paymentResult.success) {
+          throw new Error(paymentResult.error || "Zahlung fehlgeschlagen");
+        }
+
+        // Update contract status
+        await processContractPayment(input.contractId, paymentResult.transactionId!);
+
+        return { success: true, transactionId: paymentResult.transactionId };
+      }),
+
+    // Request withdrawal (within 14 days)
+    requestWithdrawal: protectedProcedure
+      .input(z.object({
+        contractId: z.number(),
+        reason: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) {
+          throw new Error("Vertrag nicht gefunden");
+        }
+        
+        if (contract.userId !== ctx.user?.id) {
+          throw new Error("Nicht autorisiert");
+        }
+
+        const result = await requestContractWithdrawal(input.contractId, input.reason);
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+
+        // Refund the down payment to wallet
+        if (contract.downPaymentTransactionId) {
+          const downPaymentAmount = parseFloat(contract.downPaymentAmount);
+          await createWalletTransaction({
+            walletId: (await getWalletByUserId(ctx.user!.id))!.id,
+            userId: ctx.user!.id,
+            type: "refund",
+            amount: downPaymentAmount.toFixed(2),
+            balanceAfter: "0", // Will be updated by the function
+            status: "completed",
+            description: `Rückerstattung Anzahlung - Widerruf Vertrag ${contract.contractNumber}`,
+          });
+          
+          // Update wallet balance
+          const wallet = await getWalletByUserId(ctx.user!.id);
+          if (wallet) {
+            const newBalance = parseFloat(wallet.balance) + downPaymentAmount;
+            await updateWalletBalance(wallet.id, newBalance.toFixed(2));
+          }
+        }
+
+        return { success: true };
+      }),
+
+    // Get contract status history
+    getHistory: protectedProcedure
+      .input(z.object({ contractId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) return [];
+        
+        if (contract.userId !== ctx.user?.id && ctx.user?.role !== "admin") {
+          throw new Error("Nicht autorisiert");
+        }
+        
+        return await getContractStatusHistory(input.contractId);
+      }),
+
+    // Get contract documents
+    getDocuments: protectedProcedure
+      .input(z.object({ contractId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) return [];
+        
+        if (contract.userId !== ctx.user?.id && ctx.user?.role !== "admin") {
+          throw new Error("Nicht autorisiert");
+        }
+        
+        return await getContractDocuments(input.contractId);
+      }),
+
+    // ==================== ADMIN FUNCTIONS ====================
+    
+    // Get all contracts (admin)
+    listAll: publicProcedure
+      .query(async () => {
+        return await getAllPurchaseContracts();
+      }),
+
+    // Update contract status (admin)
+    updateStatus: publicProcedure
+      .input(z.object({
+        contractId: z.number(),
+        status: z.enum(["draft", "pending_payment", "active", "withdrawal", "completed", "cancelled", "converted"]),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const success = await updatePurchaseContract(
+          input.contractId,
+          { status: input.status },
+          undefined,
+          input.reason
+        );
+        return { success };
+      }),
+
+    // Sign contract as seller (admin)
+    signAsSeller: publicProcedure
+      .input(z.object({
+        contractId: z.number(),
+        signature: z.string().min(1),
+        adminUserId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const success = await signContractSeller(
+          input.contractId,
+          input.signature,
+          input.adminUserId
+        );
+        return { success };
+      }),
+
+    // Update contract PDF URL
+    updatePdf: publicProcedure
+      .input(z.object({
+        contractId: z.number(),
+        pdfUrl: z.string().url(),
+        pdfKey: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const success = await updateContractPdf(
+          input.contractId,
+          input.pdfUrl,
+          input.pdfKey
+        );
+        return { success };
+      }),
+
+    // Get contracts by property (admin)
+    getByProperty: publicProcedure
+      .input(z.object({ propertyId: z.number() }))
+      .query(async ({ input }) => {
+        return await getContractsByPropertyId(input.propertyId);
+      }),
+
+    // Add document to contract
+    addDocument: protectedProcedure
+      .input(z.object({
+        contractId: z.number(),
+        documentType: z.enum(["id_copy", "proof_of_address", "payment_receipt", "notary_draft", "notary_final", "property_document", "other"]),
+        title: z.string().min(1),
+        fileUrl: z.string().url(),
+        s3Key: z.string().optional(),
+        fileSize: z.number().optional(),
+        mimeType: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.user?.id) {
+          throw new Error("Nicht autorisiert");
+        }
+
+        const contract = await getPurchaseContractById(input.contractId);
+        if (!contract) {
+          throw new Error("Vertrag nicht gefunden");
+        }
+        
+        if (contract.userId !== ctx.user.id && ctx.user.role !== "admin") {
+          throw new Error("Nicht autorisiert");
+        }
+
+        const documentId = await addContractDocument({
+          contractId: input.contractId,
+          documentType: input.documentType,
+          title: input.title,
+          fileUrl: input.fileUrl,
+          s3Key: input.s3Key,
+          fileSize: input.fileSize,
+          mimeType: input.mimeType,
+          uploadedBy: ctx.user.id,
+        });
+
+        return { documentId };
+      }),
+
+    // Delete document
+    deleteDocument: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await deleteContractDocument(input.documentId);
+        return { success };
       }),
   }),
 });
