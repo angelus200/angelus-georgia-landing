@@ -90,7 +90,7 @@ function Router() {
       <Route path={"/videos"} component={Videos} />
       <Route path={"/investment-test"} component={InvestmentTest} />
       <Route path={"/wallet"} component={Wallet} />
-      <Route path={"/kaufvertrag/:propertyId"} component={PurchaseContract} />
+      <Route path={"/purchase/:propertyId"} component={PurchaseContract} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

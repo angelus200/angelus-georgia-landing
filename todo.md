@@ -356,3 +356,6 @@
 ## Kaufprozess-Integration
 - [x] Kaufen-Button auf Immobilien-Detailseite hinzufügen
 - [x] Vertrags-Übersicht im Kunden-Dashboard implementieren
+
+## Bug-Fix: Purchase Route 404
+- [x] /purchase/:propertyId Route 404-Fehler beheben
