@@ -352,3 +352,7 @@
 
 ## Verträge-Tab im AdminDirect
 - [x] Verträge-Tab zu AdminDirect.tsx hinzufügen
+
+## Kaufprozess-Integration
+- [x] Kaufen-Button auf Immobilien-Detailseite hinzufügen
+- [x] Vertrags-Übersicht im Kunden-Dashboard implementieren

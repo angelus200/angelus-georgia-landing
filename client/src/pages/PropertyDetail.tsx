@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   Play,
   Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -623,6 +624,20 @@ export default function PropertyDetail() {
                     </>
                   )}
                 </Button>
+
+                {/* Direkter Kaufen-Button mit Vorvertrag */}
+                <Link href={`/purchase/${property.id}`}>
+                  <Button
+                    className="w-full mt-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white py-6 text-lg shadow-lg"
+                    variant="default"
+                  >
+                    <FileText className="w-5 h-5 mr-2" />
+                    Jetzt kaufen (Vorvertrag)
+                  </Button>
+                </Link>
+                <p className="text-xs text-center text-gray-500 mt-1">
+                  Direkter Kauf mit digitalem Vorvertrag nach georgischem Recht
+                </p>
 
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <p className="text-sm font-semibold text-gray-900">Ihre Vorteile:</p>

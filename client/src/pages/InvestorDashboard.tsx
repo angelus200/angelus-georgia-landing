@@ -160,9 +160,10 @@ export default function InvestorDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Übersicht</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
+            <TabsTrigger value="contracts">Verträge</TabsTrigger>
             <TabsTrigger value="packages">Service-Pakete</TabsTrigger>
             <TabsTrigger value="payments">Zahlungen</TabsTrigger>
             <TabsTrigger value="wallet">Wallet</TabsTrigger>
@@ -285,6 +286,10 @@ export default function InvestorDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="contracts">
+            <ContractsSection userId={user.id} />
           </TabsContent>
 
           <TabsContent value="packages">
@@ -440,5 +445,194 @@ export default function InvestorDashboard() {
         </Tabs>
       </main>
     </div>
+  );
+}
+
+// Contracts Section Component
+function ContractsSection({ userId }: { userId: number }) {
+  const { data: contracts, isLoading } = trpc.contracts.myContracts.useQuery();
+
+  const statusLabels: Record<string, string> = {
+    draft: "Entwurf",
+    pending_payment: "Warte auf Zahlung",
+    active: "Aktiv",
+    completed: "Abgeschlossen",
+    withdrawal: "Widerrufen",
+    cancelled: "Storniert",
+    converted: "Umgewandelt",
+  };
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-gray-100 text-gray-800",
+    pending_payment: "bg-orange-100 text-orange-800",
+    active: "bg-green-100 text-green-800",
+    completed: "bg-blue-100 text-blue-800",
+    withdrawal: "bg-red-100 text-red-800",
+    cancelled: "bg-red-100 text-red-800",
+    converted: "bg-purple-100 text-purple-800",
+  };
+
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: "EUR",
+    }).format(num);
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("de-DE");
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4A052] mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Verträge werden geladen...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!contracts || contracts.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Meine Kaufverträge</CardTitle>
+          <CardDescription>
+            Übersicht aller Ihrer Immobilien-Kaufverträge
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12">
+            <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">
+              Sie haben noch keine Kaufverträge abgeschlossen
+            </p>
+            <Link href="/immobilien">
+              <Button className="bg-[#C4A052] hover:bg-[#B39142]">
+                <Building2 className="h-4 w-4 mr-2" />
+                Immobilien entdecken
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Meine Kaufverträge</CardTitle>
+        <CardDescription>
+          Übersicht aller Ihrer Immobilien-Kaufverträge ({contracts.length} Vertrag{contracts.length !== 1 ? "äge" : ""})
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {contracts.map((contract: any) => (
+            <div
+              key={contract.id}
+              className="border border-gray-200 rounded-lg p-4 hover:border-[#C4A052]/50 transition-colors"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-mono text-sm text-gray-500">
+                      {contract.contractNumber}
+                    </span>
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[contract.status] || "bg-gray-100"}`}>
+                      {statusLabels[contract.status] || contract.status}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-lg text-gray-900">
+                    {contract.propertyTitle}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {contract.propertyLocation}, {contract.propertyCity}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-[#C4A052]">
+                    {formatCurrency(contract.purchasePrice)}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Anzahlung: {formatCurrency(contract.downPaymentAmount)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-6 text-sm text-gray-600">
+                  <span>
+                    <strong>Erstellt:</strong> {formatDate(contract.createdAt)}
+                  </span>
+                  {contract.paymentPlan === "installment" && (
+                    <span>
+                      <strong>Ratenzahlung:</strong> {contract.installmentMonths} Monate
+                    </span>
+                  )}
+                  {contract.withdrawalDeadline && contract.status === "active" && (
+                    <span className="text-orange-600">
+                      <strong>Widerruf bis:</strong> {formatDate(contract.withdrawalDeadline)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {contract.contractPdfUrl && (
+                    <a
+                      href={contract.contractPdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#C4A052] bg-[#C4A052]/10 rounded-md hover:bg-[#C4A052]/20 transition-colors"
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      PDF herunterladen
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Withdrawal Info */}
+              {contract.status === "withdrawal" && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-700">
+                    <strong>Widerrufen am:</strong> {formatDate(contract.withdrawalRequestedAt)}
+                  </p>
+                  {contract.withdrawalReason && (
+                    <p className="text-sm text-red-600 mt-1">
+                      Grund: {contract.withdrawalReason}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Payment Info for pending_payment */}
+              {contract.status === "pending_payment" && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                  <p className="text-sm text-orange-700">
+                    <strong>Anzahlung ausstehend:</strong> {formatCurrency(contract.downPaymentAmount)}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Bitte zahlen Sie die Anzahlung über Ihr Wallet ein, um den Vertrag zu aktivieren.
+                  </p>
+                  <Link href="/wallet">
+                    <Button size="sm" className="mt-2 bg-orange-500 hover:bg-orange-600">
+                      <Wallet className="h-4 w-4 mr-1" />
+                      Zur Wallet
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
