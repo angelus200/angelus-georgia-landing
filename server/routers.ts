@@ -86,7 +86,16 @@ import {
   getContractDocuments,
   deleteContractDocument,
   getContractsByPropertyId,
-  updateContractPdf
+  updateContractPdf,
+  // Property Draft functions
+  createPropertyDraft,
+  getAllPropertyDrafts,
+  getPropertyDraftsByStatus,
+  getPropertyDraftById,
+  updatePropertyDraft,
+  deletePropertyDraft,
+  approvePropertyDraft,
+  rejectPropertyDraft
 } from "./db";
 import {
   servicesRouter,
@@ -1963,6 +1972,191 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const success = await deleteContractDocument(input.documentId);
         return { success };
+      }),
+  }),
+
+  // ==================== PROPERTY DRAFTS (AI Import) ====================
+  propertyDrafts: router({
+    // Create a new draft (admin)
+    create: publicProcedure
+      .input(z.object({
+        developerName: z.string().optional(),
+        sourceDocuments: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        longDescription: z.string().optional(),
+        location: z.string().optional(),
+        city: z.string().optional(),
+        originalPrice: z.string().optional(),
+        sellingPrice: z.string().optional(),
+        area: z.string().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        propertyType: z.enum(["apartment", "house", "villa", "commercial", "land"]).optional(),
+        constructionStatus: z.enum(["planning", "foundation", "structure", "finishing", "completed"]).optional(),
+        completionDate: z.string().optional(),
+        mainImage: z.string().optional(),
+        images: z.string().optional(),
+        videos: z.string().optional(),
+        features: z.string().optional(),
+        amenities: z.string().optional(),
+        expectedReturn: z.string().optional(),
+        rentalGuarantee: z.boolean().optional(),
+        rentalGuaranteePercent: z.string().optional(),
+        rentalGuaranteeDuration: z.number().optional(),
+        installmentAvailable: z.boolean().optional(),
+        minDownPayment: z.string().optional(),
+        maxInstallmentMonths: z.number().optional(),
+        installmentInterestRate: z.string().optional(),
+        additionalServices: z.string().optional(),
+        extractedData: z.string().optional(),
+        status: z.enum(["processing", "draft", "pending_review", "approved", "rejected"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const draftId = await createPropertyDraft({
+          ...input,
+          status: input.status || "draft",
+          completionDate: input.completionDate ? new Date(input.completionDate) : undefined,
+        });
+        return { success: true, draftId };
+      }),
+
+    // Get all drafts (admin)
+    getAll: publicProcedure
+      .query(async () => {
+        return await getAllPropertyDrafts();
+      }),
+
+    // Get drafts by status (admin)
+    getByStatus: publicProcedure
+      .input(z.object({ status: z.string() }))
+      .query(async ({ input }) => {
+        return await getPropertyDraftsByStatus(input.status);
+      }),
+
+    // Get single draft (admin)
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await getPropertyDraftById(input.id);
+      }),
+
+    // Update draft (admin)
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        developerName: z.string().optional(),
+        sourceDocuments: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        longDescription: z.string().optional(),
+        location: z.string().optional(),
+        city: z.string().optional(),
+        originalPrice: z.string().optional(),
+        sellingPrice: z.string().optional(),
+        pricePerSqm: z.string().optional(),
+        area: z.string().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        propertyType: z.enum(["apartment", "house", "villa", "commercial", "land"]).optional(),
+        constructionStatus: z.enum(["planning", "foundation", "structure", "finishing", "completed"]).optional(),
+        completionDate: z.string().optional(),
+        mainImage: z.string().optional(),
+        images: z.string().optional(),
+        videos: z.string().optional(),
+        features: z.string().optional(),
+        amenities: z.string().optional(),
+        expectedReturn: z.string().optional(),
+        rentalGuarantee: z.boolean().optional(),
+        rentalGuaranteePercent: z.string().optional(),
+        rentalGuaranteeDuration: z.number().optional(),
+        installmentAvailable: z.boolean().optional(),
+        minDownPayment: z.string().optional(),
+        maxInstallmentMonths: z.number().optional(),
+        installmentInterestRate: z.string().optional(),
+        additionalServices: z.string().optional(),
+        adjustedData: z.string().optional(),
+        adminNotes: z.string().optional(),
+        status: z.enum(["processing", "draft", "pending_review", "approved", "rejected"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        const success = await updatePropertyDraft(id, {
+          ...updates,
+          completionDate: updates.completionDate ? new Date(updates.completionDate) : undefined,
+        });
+        return { success };
+      }),
+
+    // Delete draft (admin)
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await deletePropertyDraft(input.id);
+        return { success };
+      }),
+
+    // Submit for review (admin)
+    submitForReview: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await updatePropertyDraft(input.id, { status: "pending_review" });
+        return { success };
+      }),
+
+    // Approve draft and create property (admin)
+    approve: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        reviewedBy: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await approvePropertyDraft(input.id, input.reviewedBy);
+        return result;
+      }),
+
+    // Reject draft (admin)
+    reject: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        reviewedBy: z.number(),
+        reason: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const success = await rejectPropertyDraft(input.id, input.reviewedBy, input.reason);
+        return { success };
+      }),
+
+    // AI Analysis endpoint
+    analyzeDocument: publicProcedure
+      .input(z.object({
+        documentContent: z.string(),
+        documentType: z.enum(["pdf", "word", "text", "image"]),
+        additionalContext: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { analyzePropertyDocument } = await import("./ai-property-analyzer");
+        const result = await analyzePropertyDocument(
+          input.documentContent,
+          input.documentType,
+          input.additionalContext
+        );
+        return result;
+      }),
+
+    // AI Image Analysis endpoint
+    analyzeImages: publicProcedure
+      .input(z.object({
+        imageUrls: z.array(z.string().url()),
+        additionalContext: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { analyzePropertyImages } = await import("./ai-property-analyzer");
+        const result = await analyzePropertyImages(
+          input.imageUrls,
+          input.additionalContext
+        );
+        return result;
       }),
   }),
 });

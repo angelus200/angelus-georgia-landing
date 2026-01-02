@@ -47,7 +47,10 @@ import {
   InsertContractDocument,
   contractStatusHistory,
   ContractStatusHistory,
-  InsertContractStatusHistory
+  InsertContractStatusHistory,
+  propertyDrafts,
+  PropertyDraft,
+  InsertPropertyDraft
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -2840,6 +2843,220 @@ export async function updateContractPdf(
     return true;
   } catch (error) {
     console.error("[Database] Failed to update contract PDF:", error);
+    return false;
+  }
+}
+
+
+// ==================== PROPERTY DRAFTS (AI Import) ====================
+
+/**
+ * Create a new property draft
+ */
+export async function createPropertyDraft(draft: InsertPropertyDraft): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(propertyDrafts).values(draft);
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create property draft:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all property drafts
+ */
+export async function getAllPropertyDrafts(): Promise<PropertyDraft[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(propertyDrafts)
+      .orderBy(desc(propertyDrafts.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get property drafts:", error);
+    return [];
+  }
+}
+
+/**
+ * Get property drafts by status
+ */
+export async function getPropertyDraftsByStatus(status: string): Promise<PropertyDraft[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db.select()
+      .from(propertyDrafts)
+      .where(eq(propertyDrafts.status, status as any))
+      .orderBy(desc(propertyDrafts.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get property drafts by status:", error);
+    return [];
+  }
+}
+
+/**
+ * Get property draft by ID
+ */
+export async function getPropertyDraftById(id: number): Promise<PropertyDraft | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select()
+      .from(propertyDrafts)
+      .where(eq(propertyDrafts.id, id))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get property draft:", error);
+    return null;
+  }
+}
+
+/**
+ * Update property draft
+ */
+export async function updatePropertyDraft(
+  id: number,
+  updates: Partial<InsertPropertyDraft>
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(propertyDrafts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(propertyDrafts.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update property draft:", error);
+    return false;
+  }
+}
+
+/**
+ * Delete property draft
+ */
+export async function deletePropertyDraft(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.delete(propertyDrafts).where(eq(propertyDrafts.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete property draft:", error);
+    return false;
+  }
+}
+
+/**
+ * Approve property draft and create property
+ */
+export async function approvePropertyDraft(
+  draftId: number,
+  reviewedBy: number
+): Promise<{ success: boolean; propertyId?: number; error?: string }> {
+  const db = await getDb();
+  if (!db) return { success: false, error: "Database not available" };
+
+  try {
+    const draft = await getPropertyDraftById(draftId);
+    if (!draft) {
+      return { success: false, error: "Entwurf nicht gefunden" };
+    }
+
+    if (draft.status !== "pending_review") {
+      return { success: false, error: "Entwurf ist nicht zur Prüfung freigegeben" };
+    }
+
+    // Create property from draft
+    const propertyData: InsertProperty = {
+      title: draft.title || "Neue Immobilie",
+      description: draft.description || "",
+      longDescription: draft.longDescription,
+      location: draft.location || "",
+      city: draft.city || "",
+      latitude: draft.latitude,
+      longitude: draft.longitude,
+      price: draft.sellingPrice || draft.originalPrice || "0",
+      pricePerSqm: draft.pricePerSqm,
+      area: draft.area || "0",
+      bedrooms: draft.bedrooms || 0,
+      bathrooms: draft.bathrooms || 0,
+      yearBuilt: draft.yearBuilt,
+      propertyType: draft.propertyType,
+      constructionStatus: draft.constructionStatus || "planning",
+      completionDate: draft.completionDate,
+      mainImage: draft.mainImage,
+      images: draft.images || "[]",
+      videos: draft.videos,
+      features: draft.features,
+      amenities: draft.amenities,
+      expectedReturn: draft.expectedReturn,
+      rentalGuarantee: draft.rentalGuarantee,
+      rentalGuaranteePercent: draft.rentalGuaranteePercent,
+      rentalGuaranteeDuration: draft.rentalGuaranteeDuration,
+      installmentAvailable: draft.installmentAvailable,
+      minDownPayment: draft.minDownPayment,
+      maxInstallmentMonths: draft.maxInstallmentMonths,
+      installmentInterestRate: draft.installmentInterestRate,
+      status: "available",
+      isFeatured: false,
+    };
+
+    const result = await db.insert(properties).values(propertyData);
+    const propertyId = Number(result[0].insertId);
+
+    // Update draft status
+    await db.update(propertyDrafts)
+      .set({
+        status: "approved",
+        approvedPropertyId: propertyId,
+        reviewedBy,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(propertyDrafts.id, draftId));
+
+    return { success: true, propertyId };
+  } catch (error) {
+    console.error("[Database] Failed to approve property draft:", error);
+    return { success: false, error: "Fehler bei der Genehmigung" };
+  }
+}
+
+/**
+ * Reject property draft
+ */
+export async function rejectPropertyDraft(
+  draftId: number,
+  reviewedBy: number,
+  reason: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(propertyDrafts)
+      .set({
+        status: "rejected",
+        rejectionReason: reason,
+        reviewedBy,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(propertyDrafts.id, draftId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to reject property draft:", error);
     return false;
   }
 }

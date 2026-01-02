@@ -1136,6 +1136,16 @@ function AdminDirectDashboard() {
           >
             📝 Verträge
           </button>
+          <button
+            onClick={() => setActiveTab("ai-import")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "ai-import" 
+                ? "bg-purple-100 text-purple-800 shadow-sm" 
+                : "text-purple-700 hover:text-purple-900 bg-purple-50"
+            }`}
+          >
+            ✨ KI-Import
+          </button>
           <Link
             href="/crm"
             className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-[#C4A052] text-white hover:bg-[#B39142]"
@@ -1375,6 +1385,11 @@ function AdminDirectDashboard() {
               {/* Contracts Tab */}
               {activeTab === "contracts" && (
                 <ContractsTab />
+              )}
+              
+              {/* AI Import Tab */}
+              {activeTab === "ai-import" && (
+                <AIPropertyImportTab />
               )}
             </>
           )}
@@ -3453,6 +3468,963 @@ function ContractsTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// AI Property Import Tab Component
+function AIPropertyImportTab() {
+  const [activeSubTab, setActiveSubTab] = useState<"upload" | "drafts">("upload");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [developerName, setDeveloperName] = useState("");
+  const [additionalContext, setAdditionalContext] = useState("");
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [isLoadingDrafts, setIsLoadingDrafts] = useState(true);
+  const [editingDraft, setEditingDraft] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Load drafts
+  useEffect(() => {
+    loadDrafts();
+  }, []);
+
+  const loadDrafts = async () => {
+    setIsLoadingDrafts(true);
+    try {
+      const res = await fetch("/api/trpc/propertyDrafts.getAll");
+      const data = await res.json();
+      if (data.result?.data?.json) {
+        setDrafts(data.result.data.json);
+      }
+    } catch (error) {
+      console.error("Failed to load drafts:", error);
+    } finally {
+      setIsLoadingDrafts(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedImages(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const readFileAsText = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      
+      if (file.type.includes('text') || file.name.endsWith('.txt')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  const uploadImageToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('/api/upload/image', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+    
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleAnalyze = async () => {
+    if (uploadedFiles.length === 0 && uploadedImages.length === 0) {
+      alert("Bitte laden Sie mindestens ein Dokument oder Bild hoch");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    let combinedData: any = {};
+
+    try {
+      // Analyze documents
+      for (const file of uploadedFiles) {
+        const content = await readFileAsText(file);
+        const docType = file.type.includes('pdf') ? 'pdf' : 
+                       file.type.includes('word') ? 'word' : 'text';
+        
+        const res = await fetch("/api/trpc/propertyDrafts.analyzeDocument", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            json: {
+              documentContent: content,
+              documentType: docType,
+              additionalContext: `Bauträger: ${developerName}\n${additionalContext}`,
+            }
+          }),
+        });
+
+        const result = await res.json();
+        if (result.result?.data?.json?.success && result.result?.data?.json?.data) {
+          combinedData = { ...combinedData, ...result.result.data.json.data };
+        }
+      }
+
+      // Analyze images if any
+      if (uploadedImages.length > 0) {
+        const imageUrls: string[] = [];
+        for (const img of uploadedImages) {
+          try {
+            const url = await uploadImageToS3(img);
+            imageUrls.push(url);
+          } catch (e) {
+            console.error('Failed to upload image:', e);
+          }
+        }
+
+        if (imageUrls.length > 0) {
+          const res = await fetch("/api/trpc/propertyDrafts.analyzeImages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              json: {
+                imageUrls,
+                additionalContext: `Bauträger: ${developerName}\n${additionalContext}`,
+              }
+            }),
+          });
+
+          const imageResult = await res.json();
+          if (imageResult.result?.data?.json?.success && imageResult.result?.data?.json?.data) {
+            const imgData = imageResult.result.data.json.data;
+            if (imgData.features) {
+              combinedData.features = [
+                ...(combinedData.features || []),
+                ...imgData.features
+              ];
+            }
+            if (imgData.amenities) {
+              combinedData.amenities = [
+                ...(combinedData.amenities || []),
+                ...imgData.amenities
+              ];
+            }
+            if (!combinedData.constructionStatus && imgData.constructionStatus) {
+              combinedData.constructionStatus = imgData.constructionStatus;
+            }
+          }
+        }
+      }
+
+      combinedData.developerName = developerName;
+      setExtractedData(combinedData);
+      alert("Analyse abgeschlossen!");
+    } catch (error) {
+      console.error('Analysis error:', error);
+      alert("Fehler bei der Analyse");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleCreateDraft = async () => {
+    if (!extractedData) {
+      alert("Bitte führen Sie zuerst eine Analyse durch");
+      return;
+    }
+
+    // Upload images to S3 and get URLs
+    const imageUrls: string[] = [];
+    let mainImageUrl = "";
+
+    for (let i = 0; i < uploadedImages.length; i++) {
+      try {
+        const url = await uploadImageToS3(uploadedImages[i]);
+        if (i === 0) {
+          mainImageUrl = url;
+        }
+        imageUrls.push(url);
+      } catch (e) {
+        console.error('Failed to upload image:', e);
+      }
+    }
+
+    try {
+      const res = await fetch("/api/trpc/propertyDrafts.create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          json: {
+            developerName: extractedData.developerName,
+            title: extractedData.title,
+            description: extractedData.description,
+            longDescription: extractedData.longDescription,
+            location: extractedData.location,
+            city: extractedData.city,
+            originalPrice: extractedData.originalPrice?.toString(),
+            area: extractedData.area?.toString(),
+            bedrooms: extractedData.bedrooms,
+            bathrooms: extractedData.bathrooms,
+            propertyType: extractedData.propertyType,
+            constructionStatus: extractedData.constructionStatus,
+            completionDate: extractedData.completionDate,
+            mainImage: mainImageUrl,
+            images: JSON.stringify(imageUrls),
+            features: JSON.stringify(extractedData.features || []),
+            amenities: JSON.stringify(extractedData.amenities || []),
+            expectedReturn: extractedData.expectedReturn?.toString(),
+            rentalGuarantee: extractedData.rentalGuarantee,
+            rentalGuaranteePercent: extractedData.rentalGuaranteePercent?.toString(),
+            extractedData: JSON.stringify(extractedData),
+            status: "draft",
+          }
+        }),
+      });
+
+      const result = await res.json();
+      if (result.result?.data?.json?.success) {
+        alert("Entwurf erfolgreich erstellt!");
+        resetForm();
+        loadDrafts();
+        setActiveSubTab("drafts");
+      } else {
+        alert("Fehler beim Erstellen des Entwurfs");
+      }
+    } catch (error) {
+      console.error("Error creating draft:", error);
+      alert("Fehler beim Erstellen des Entwurfs");
+    }
+  };
+
+  const resetForm = () => {
+    setUploadedFiles([]);
+    setUploadedImages([]);
+    setDeveloperName("");
+    setAdditionalContext("");
+    setExtractedData(null);
+  };
+
+  const handleSubmitForReview = async (id: number) => {
+    try {
+      const res = await fetch("/api/trpc/propertyDrafts.submitForReview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { id } }),
+      });
+
+      if (res.ok) {
+        alert("Zur Prüfung eingereicht!");
+        loadDrafts();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Fehler beim Einreichen");
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      const res = await fetch("/api/trpc/propertyDrafts.approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { id, reviewedBy: 1 } }),
+      });
+
+      const result = await res.json();
+      if (result.result?.data?.json?.success) {
+        alert(`Immobilie erstellt (ID: ${result.result.data.json.propertyId})`);
+        loadDrafts();
+      } else {
+        alert(result.result?.data?.json?.error || "Fehler bei der Genehmigung");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Fehler bei der Genehmigung");
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    const reason = prompt("Ablehnungsgrund:");
+    if (!reason) return;
+
+    try {
+      const res = await fetch("/api/trpc/propertyDrafts.reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { id, reviewedBy: 1, reason } }),
+      });
+
+      if (res.ok) {
+        alert("Entwurf abgelehnt");
+        loadDrafts();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Fehler beim Ablehnen");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Entwurf wirklich löschen?")) return;
+
+    try {
+      const res = await fetch("/api/trpc/propertyDrafts.delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { id } }),
+      });
+
+      if (res.ok) {
+        alert("Entwurf gelöscht");
+        loadDrafts();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Fehler beim Löschen");
+    }
+  };
+
+  const formatCurrency = (value: string | number | undefined) => {
+    if (!value) return "-";
+    const num = typeof value === "string" ? parseFloat(value) : value;
+    return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(num);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { label: string; color: string }> = {
+      processing: { label: "Verarbeitung", color: "bg-blue-100 text-blue-800" },
+      draft: { label: "Entwurf", color: "bg-gray-100 text-gray-800" },
+      pending_review: { label: "Zur Prüfung", color: "bg-orange-100 text-orange-800" },
+      approved: { label: "Genehmigt", color: "bg-green-100 text-green-800" },
+      rejected: { label: "Abgelehnt", color: "bg-red-100 text-red-800" },
+    };
+    const config = statusConfig[status] || { label: status, color: "bg-gray-100 text-gray-800" };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 border-b border-gray-200 pb-4">
+        <button
+          onClick={() => setActiveSubTab("upload")}
+          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+            activeSubTab === "upload"
+              ? "bg-purple-100 text-purple-800 border-b-2 border-purple-500"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          ✨ KI-Analyse
+        </button>
+        <button
+          onClick={() => setActiveSubTab("drafts")}
+          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+            activeSubTab === "drafts"
+              ? "bg-purple-100 text-purple-800 border-b-2 border-purple-500"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          📋 Entwürfe ({drafts.length})
+        </button>
+      </div>
+
+      {/* Upload Tab */}
+      {activeSubTab === "upload" && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-200">
+            <h3 className="text-lg font-semibold text-purple-900 mb-2 flex items-center gap-2">
+              ✨ KI-gestützte Immobilien-Erfassung
+            </h3>
+            <p className="text-purple-700 text-sm">
+              Laden Sie Bauträger-Unterlagen hoch und lassen Sie die KI automatisch alle relevanten Daten extrahieren
+            </p>
+          </div>
+
+          {/* Developer Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bauträger / Entwickler
+            </label>
+            <input
+              type="text"
+              value={developerName}
+              onChange={(e) => setDeveloperName(e.target.value)}
+              placeholder="z.B. ABC Development GmbH"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          {/* Document Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dokumente hochladen (PDF, Word, Text)
+            </label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-purple-400 transition-colors"
+            >
+              <div className="text-4xl mb-2">📄</div>
+              <p className="text-gray-600">Klicken oder Dateien hierher ziehen</p>
+              <p className="text-xs text-gray-400 mt-1">PDF, DOCX, TXT unterstützt</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.txt"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+            </div>
+            {uploadedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {uploadedFiles.map((file, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm">
+                    📄 {file.name}
+                    <button onClick={() => removeFile(index)} className="ml-1 text-red-500 hover:text-red-700">✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bilder hochladen
+            </label>
+            <div
+              onClick={() => imageInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-purple-400 transition-colors"
+            >
+              <div className="text-4xl mb-2">🖼️</div>
+              <p className="text-gray-600">Immobilienbilder hochladen</p>
+              <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP unterstützt</p>
+              <input
+                ref={imageInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </div>
+            {uploadedImages.length > 0 && (
+              <div className="grid grid-cols-6 gap-2 mt-2">
+                {uploadedImages.map((file, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-full h-20 object-cover rounded"
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Additional Context */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Zusätzlicher Kontext (optional)
+            </label>
+            <textarea
+              value={additionalContext}
+              onChange={(e) => setAdditionalContext(e.target.value)}
+              placeholder="Weitere Informationen zur Immobilie..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          {/* Analyze Button */}
+          <button
+            onClick={handleAnalyze}
+            disabled={isAnalyzing || (uploadedFiles.length === 0 && uploadedImages.length === 0)}
+            className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {isAnalyzing ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span> Analysiere mit KI...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                ✨ Mit KI analysieren
+              </span>
+            )}
+          </button>
+
+          {/* Extracted Data Preview */}
+          {extractedData && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <h4 className="font-semibold text-green-800 mb-4 flex items-center gap-2">
+                ✅ Extrahierte Daten
+                {extractedData.confidence && (
+                  <span className="text-xs bg-green-200 px-2 py-1 rounded">
+                    {Math.round(extractedData.confidence * 100)}% Konfidenz
+                  </span>
+                )}
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Titel:</strong> {extractedData.title || "-"}</div>
+                <div><strong>Bauträger:</strong> {extractedData.developerName || "-"}</div>
+                <div><strong>Standort:</strong> {extractedData.location || "-"}, {extractedData.city || "-"}</div>
+                <div><strong>Preis:</strong> {formatCurrency(extractedData.originalPrice)}</div>
+                <div><strong>Fläche:</strong> {extractedData.area ? `${extractedData.area} m²` : "-"}</div>
+                <div><strong>Zimmer:</strong> {extractedData.bedrooms || "-"} Schlafzimmer, {extractedData.bathrooms || "-"} Bäder</div>
+                <div><strong>Typ:</strong> {extractedData.propertyType || "-"}</div>
+                <div><strong>Baustatus:</strong> {extractedData.constructionStatus || "-"}</div>
+                {extractedData.features && extractedData.features.length > 0 && (
+                  <div className="col-span-2">
+                    <strong>Ausstattung:</strong>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {extractedData.features.map((f: string, i: number) => (
+                        <span key={i} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">{f}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={handleCreateDraft}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  ✅ Als Entwurf speichern
+                </button>
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  🔄 Zurücksetzen
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Drafts Tab */}
+      {activeSubTab === "drafts" && (
+        <div className="space-y-4">
+          {isLoadingDrafts ? (
+            <div className="text-center py-12">
+              <span className="animate-spin text-4xl">⏳</span>
+              <p className="mt-2 text-gray-500">Lade Entwürfe...</p>
+            </div>
+          ) : drafts.length > 0 ? (
+            <div className="space-y-4">
+              {drafts.map((draft) => (
+                <div key={draft.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {getStatusBadge(draft.status)}
+                        <span className="text-sm text-gray-500">#{draft.id}</span>
+                      </div>
+                      <h3 className="font-semibold text-lg">
+                        {draft.title || "Unbenannte Immobilie"}
+                      </h3>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        {draft.location && (
+                          <span>📍 {draft.location}, {draft.city}</span>
+                        )}
+                        {draft.originalPrice && (
+                          <span>💰 {formatCurrency(draft.originalPrice)}</span>
+                        )}
+                        {draft.area && (
+                          <span>📐 {draft.area} m²</span>
+                        )}
+                      </div>
+                      {draft.developerName && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Bauträger: {draft.developerName}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {draft.status === "draft" && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingDraft(draft);
+                              setShowEditModal(true);
+                            }}
+                            className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            ✏️ Bearbeiten
+                          </button>
+                          <button
+                            onClick={() => handleSubmitForReview(draft.id)}
+                            className="px-3 py-1 text-sm bg-orange-500 text-white rounded hover:bg-orange-600"
+                          >
+                            📤 Zur Prüfung
+                          </button>
+                        </>
+                      )}
+                      {draft.status === "pending_review" && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(draft.id)}
+                            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            ✅ Genehmigen
+                          </button>
+                          <button
+                            onClick={() => handleReject(draft.id)}
+                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                          >
+                            ❌ Ablehnen
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDelete(draft.id)}
+                        className="px-3 py-1 text-sm text-red-500 hover:text-red-700"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-4xl mb-4">📋</div>
+              <p className="text-gray-500">Noch keine Entwürfe vorhanden</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Laden Sie Dokumente hoch und lassen Sie die KI Immobiliendaten extrahieren
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingDraft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Entwurf bearbeiten</h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingDraft(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <DraftEditForm
+              draft={editingDraft}
+              onSave={async (data) => {
+                try {
+                  const res = await fetch("/api/trpc/propertyDrafts.update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ json: { id: editingDraft.id, ...data } }),
+                  });
+
+                  if (res.ok) {
+                    alert("Entwurf aktualisiert!");
+                    setShowEditModal(false);
+                    setEditingDraft(null);
+                    loadDrafts();
+                  }
+                } catch (error) {
+                  console.error("Error:", error);
+                  alert("Fehler beim Speichern");
+                }
+              }}
+              onCancel={() => {
+                setShowEditModal(false);
+                setEditingDraft(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Draft Edit Form Component
+function DraftEditForm({
+  draft,
+  onSave,
+  onCancel
+}: {
+  draft: any;
+  onSave: (data: any) => void;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: draft.title || "",
+    description: draft.description || "",
+    location: draft.location || "",
+    city: draft.city || "",
+    originalPrice: draft.originalPrice || "",
+    sellingPrice: draft.sellingPrice || "",
+    area: draft.area || "",
+    bedrooms: draft.bedrooms || 0,
+    bathrooms: draft.bathrooms || 0,
+    propertyType: draft.propertyType || "apartment",
+    constructionStatus: draft.constructionStatus || "planning",
+    minDownPayment: draft.minDownPayment || "30",
+    maxInstallmentMonths: draft.maxInstallmentMonths || 36,
+    installmentInterestRate: draft.installmentInterestRate || "6",
+  });
+
+  const handleChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    onSave({
+      ...formData,
+      bedrooms: Number(formData.bedrooms),
+      bathrooms: Number(formData.bathrooms),
+      maxInstallmentMonths: Number(formData.maxInstallmentMonths),
+    });
+  };
+
+  // Calculate price per sqm
+  const pricePerSqm = formData.sellingPrice && formData.area
+    ? (parseFloat(formData.sellingPrice) / parseFloat(formData.area)).toFixed(2)
+    : "";
+
+  // Calculate margin
+  const margin = formData.originalPrice && formData.sellingPrice
+    ? ((parseFloat(formData.sellingPrice) - parseFloat(formData.originalPrice)) / parseFloat(formData.originalPrice) * 100).toFixed(1)
+    : "";
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Basic Info */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => handleChange("title", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => handleChange("description", e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Standort</label>
+          <input
+            type="text"
+            value={formData.location}
+            onChange={(e) => handleChange("location", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Stadt</label>
+          <input
+            type="text"
+            value={formData.city}
+            onChange={(e) => handleChange("city", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+      </div>
+
+      {/* Pricing */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <h4 className="font-semibold text-amber-800 mb-4">💰 Preisgestaltung</h4>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Originalpreis (Bauträger)</label>
+            <input
+              type="number"
+              value={formData.originalPrice}
+              onChange={(e) => handleChange("originalPrice", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Verkaufspreis</label>
+            <input
+              type="number"
+              value={formData.sellingPrice}
+              onChange={(e) => handleChange("sellingPrice", e.target.value)}
+              className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Marge</label>
+            <input
+              value={margin ? `${margin}%` : "-"}
+              disabled
+              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fläche (m²)</label>
+            <input
+              type="number"
+              value={formData.area}
+              onChange={(e) => handleChange("area", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Preis/m²</label>
+            <input
+              value={pricePerSqm ? `${parseFloat(pricePerSqm).toLocaleString("de-DE")} €` : "-"}
+              disabled
+              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Options */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-blue-800 mb-4">📅 Zahlungsoptionen</h4>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Min. Anzahlung (%)</label>
+            <input
+              type="number"
+              value={formData.minDownPayment}
+              onChange={(e) => handleChange("minDownPayment", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Max. Ratenlaufzeit (Monate)</label>
+            <input
+              type="number"
+              value={formData.maxInstallmentMonths}
+              onChange={(e) => handleChange("maxInstallmentMonths", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Zinssatz (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.installmentInterestRate}
+              onChange={(e) => handleChange("installmentInterestRate", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Property Details */}
+      <div className="grid grid-cols-4 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Schlafzimmer</label>
+          <input
+            type="number"
+            value={formData.bedrooms}
+            onChange={(e) => handleChange("bedrooms", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Badezimmer</label>
+          <input
+            type="number"
+            value={formData.bathrooms}
+            onChange={(e) => handleChange("bathrooms", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Immobilientyp</label>
+          <select
+            value={formData.propertyType}
+            onChange={(e) => handleChange("propertyType", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="apartment">Wohnung</option>
+            <option value="house">Haus</option>
+            <option value="villa">Villa</option>
+            <option value="commercial">Gewerbe</option>
+            <option value="land">Grundstück</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Baustatus</label>
+          <select
+            value={formData.constructionStatus}
+            onChange={(e) => handleChange("constructionStatus", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="planning">Planung</option>
+            <option value="foundation">Fundament</option>
+            <option value="structure">Rohbau</option>
+            <option value="finishing">Ausbau</option>
+            <option value="completed">Fertiggestellt</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <button
+          onClick={onCancel}
+          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+        >
+          Abbrechen
+        </button>
+        <button
+          onClick={handleSubmit}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+        >
+          💾 Speichern
+        </button>
+      </div>
     </div>
   );
 }

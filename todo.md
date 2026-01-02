@@ -359,3 +359,11 @@
 
 ## Bug-Fix: Purchase Route 404
 - [x] /purchase/:propertyId Route 404-Fehler beheben
+
+## KI-gestützte Immobilien-Erfassung
+- [x] Datenbankschema für Immobilien-Entwürfe mit Status (draft/pending/approved/rejected)
+- [x] Backend-API für Dokument-Upload (PDF, Word, Bilder)
+- [x] KI-Analyse-Service mit Manus Forge für Datenextraktion
+- [x] Admin-UI für KI-Import mit Dokument-Upload
+- [x] Bearbeitungsformular für extrahierte Daten (Preise, Services, Zahlungsvarianten)
+- [x] Admin-Freigabe-Workflow (Entwurf → Prüfung → Freigabe/Ablehnung)

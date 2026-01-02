@@ -922,3 +922,85 @@ export const contractStatusHistory = mysqlTable("contract_status_history", {
 
 export type ContractStatusHistory = typeof contractStatusHistory.$inferSelect;
 export type InsertContractStatusHistory = typeof contractStatusHistory.$inferInsert;
+
+
+/**
+ * Property drafts table for AI-assisted property creation
+ * Stores extracted data from uploaded documents before admin approval
+ */
+export const propertyDrafts = mysqlTable("property_drafts", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Status of the draft */
+  status: mysqlEnum("status", ["processing", "draft", "pending_review", "approved", "rejected"]).default("processing").notNull(),
+  /** Developer/Builder name */
+  developerName: varchar("developerName", { length: 255 }),
+  /** Original source documents (JSON array of URLs) */
+  sourceDocuments: text("sourceDocuments"),
+  /** Extracted property data (JSON) */
+  extractedData: text("extractedData"),
+  /** Admin-adjusted property data (JSON) */
+  adjustedData: text("adjustedData"),
+  /** Property title */
+  title: varchar("title", { length: 255 }),
+  description: text("description"),
+  longDescription: text("longDescription"),
+  location: varchar("location", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  /** Original price from developer */
+  originalPrice: decimal("originalPrice", { precision: 15, scale: 2 }),
+  /** Adjusted selling price */
+  sellingPrice: decimal("sellingPrice", { precision: 15, scale: 2 }),
+  /** Price per square meter */
+  pricePerSqm: decimal("pricePerSqm", { precision: 10, scale: 2 }),
+  area: decimal("area", { precision: 10, scale: 2 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: int("bathrooms"),
+  yearBuilt: int("yearBuilt"),
+  propertyType: mysqlEnum("propertyType", ["apartment", "house", "villa", "commercial", "land"]).default("apartment"),
+  constructionStatus: mysqlEnum("constructionStatus", ["planning", "foundation", "structure", "finishing", "completed"]),
+  completionDate: timestamp("completionDate"),
+  /** Main image URL */
+  mainImage: varchar("mainImage", { length: 500 }),
+  /** JSON array of image URLs */
+  images: text("images"),
+  /** JSON array of video URLs */
+  videos: text("videos"),
+  /** JSON array of features */
+  features: text("features"),
+  /** JSON array of amenities */
+  amenities: text("amenities"),
+  /** Expected return percentage */
+  expectedReturn: decimal("expectedReturn", { precision: 5, scale: 2 }),
+  /** Rental guarantee available */
+  rentalGuarantee: boolean("rentalGuarantee").default(false),
+  rentalGuaranteePercent: decimal("rentalGuaranteePercent", { precision: 5, scale: 2 }),
+  rentalGuaranteeDuration: int("rentalGuaranteeDuration"),
+  /** Installment payment options */
+  installmentAvailable: boolean("installmentAvailable").default(true),
+  /** Minimum down payment percentage */
+  minDownPayment: decimal("minDownPayment", { precision: 5, scale: 2 }),
+  /** Maximum installment duration in months */
+  maxInstallmentMonths: int("maxInstallmentMonths"),
+  /** Interest rate for installments */
+  installmentInterestRate: decimal("installmentInterestRate", { precision: 5, scale: 2 }),
+  /** Additional services (JSON array) */
+  additionalServices: text("additionalServices"),
+  /** Admin notes */
+  adminNotes: text("adminNotes"),
+  /** Rejection reason if rejected */
+  rejectionReason: text("rejectionReason"),
+  /** ID of the created property after approval */
+  approvedPropertyId: int("approvedPropertyId"),
+  /** Created by admin ID */
+  createdBy: int("createdBy"),
+  /** Reviewed by admin ID */
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PropertyDraft = typeof propertyDrafts.$inferSelect;
+export type InsertPropertyDraft = typeof propertyDrafts.$inferInsert;
