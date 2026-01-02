@@ -95,7 +95,17 @@ import {
   updatePropertyDraft,
   deletePropertyDraft,
   approvePropertyDraft,
-  rejectPropertyDraft
+  rejectPropertyDraft,
+  // Developer functions
+  createDeveloper,
+  getAllDevelopers,
+  getDeveloperById,
+  getDeveloperByCode,
+  updateDeveloper,
+  deleteDeveloper,
+  hardDeleteDeveloper,
+  calculateSellingPrice,
+  getDefaultPaymentTerms
 } from "./db";
 import {
   servicesRouter,
@@ -2157,6 +2167,164 @@ export const appRouter = router({
           input.additionalContext
         );
         return result;
+      }),
+  }),
+
+  // ============================================
+  // DEVELOPERS / BAUTRÄGER ROUTER
+  // ============================================
+  developers: router({
+    // Get all developers (public for dropdown selection)
+    getAll: publicProcedure
+      .input(z.object({ activeOnly: z.boolean().optional() }).optional())
+      .query(async ({ input }) => {
+        return await getAllDevelopers(input?.activeOnly ?? false);
+      }),
+
+    // Get developer by ID
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await getDeveloperById(input.id);
+      }),
+
+    // Get developer by code
+    getByCode: publicProcedure
+      .input(z.object({ code: z.string() }))
+      .query(async ({ input }) => {
+        return await getDeveloperByCode(input.code);
+      }),
+
+    // Create developer (admin only)
+    create: publicProcedure
+      .input(z.object({
+        name: z.string().min(1, "Name erforderlich"),
+        code: z.string().max(50).optional(),
+        description: z.string().optional(),
+        logoUrl: z.string().url().optional().or(z.literal("")),
+        website: z.string().url().optional().or(z.literal("")),
+        // Contact
+        contactPerson: z.string().optional(),
+        contactEmail: z.string().email().optional().or(z.literal("")),
+        contactPhone: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        country: z.string().optional(),
+        // Pricing
+        defaultMarginPercent: z.string().optional(),
+        fixedMarginAmount: z.string().optional(),
+        marginType: z.enum(["percentage", "fixed", "both"]).optional(),
+        // Payment Terms
+        defaultDownPaymentPercent: z.string().optional(),
+        allowInstallments: z.boolean().optional(),
+        maxInstallmentMonths: z.number().optional(),
+        defaultInterestRate: z.string().optional(),
+        minInterestRate: z.string().optional(),
+        maxInterestRate: z.string().optional(),
+        // Contract
+        defaultContractLanguage: z.enum(["de", "en", "ka"]).optional(),
+        specialContractClauses: z.string().optional(),
+        warrantyMonths: z.number().optional(),
+        // Services
+        defaultServices: z.array(z.number()).optional(),
+        commissionRate: z.string().optional(),
+        // Notes
+        internalNotes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createDeveloper(input as any);
+        if (!id) {
+          throw new Error("Fehler beim Erstellen des Bauträgers");
+        }
+        return { success: true, id };
+      }),
+
+    // Update developer (admin only)
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        code: z.string().max(50).optional(),
+        description: z.string().optional(),
+        logoUrl: z.string().optional(),
+        website: z.string().optional(),
+        contactPerson: z.string().optional(),
+        contactEmail: z.string().optional(),
+        contactPhone: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        country: z.string().optional(),
+        defaultMarginPercent: z.string().optional(),
+        fixedMarginAmount: z.string().optional(),
+        marginType: z.enum(["percentage", "fixed", "both"]).optional(),
+        defaultDownPaymentPercent: z.string().optional(),
+        allowInstallments: z.boolean().optional(),
+        maxInstallmentMonths: z.number().optional(),
+        defaultInterestRate: z.string().optional(),
+        minInterestRate: z.string().optional(),
+        maxInterestRate: z.string().optional(),
+        defaultContractLanguage: z.enum(["de", "en", "ka"]).optional(),
+        specialContractClauses: z.string().optional(),
+        warrantyMonths: z.number().optional(),
+        defaultServices: z.array(z.number()).optional(),
+        commissionRate: z.string().optional(),
+        internalNotes: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        const success = await updateDeveloper(id, updates as any);
+        if (!success) {
+          throw new Error("Fehler beim Aktualisieren des Bauträgers");
+        }
+        return { success: true };
+      }),
+
+    // Delete developer (soft delete)
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await deleteDeveloper(input.id);
+        if (!success) {
+          throw new Error("Fehler beim Löschen des Bauträgers");
+        }
+        return { success: true };
+      }),
+
+    // Hard delete developer (permanent)
+    hardDelete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const success = await hardDeleteDeveloper(input.id);
+        if (!success) {
+          throw new Error("Fehler beim endgültigen Löschen des Bauträgers");
+        }
+        return { success: true };
+      }),
+
+    // Calculate selling price based on developer settings
+    calculatePrice: publicProcedure
+      .input(z.object({
+        developerId: z.number(),
+        purchasePrice: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const developer = await getDeveloperById(input.developerId);
+        if (!developer) {
+          throw new Error("Bauträger nicht gefunden");
+        }
+        return calculateSellingPrice(input.purchasePrice, developer);
+      }),
+
+    // Get default payment terms for developer
+    getPaymentTerms: publicProcedure
+      .input(z.object({ developerId: z.number() }))
+      .query(async ({ input }) => {
+        const developer = await getDeveloperById(input.developerId);
+        if (!developer) {
+          throw new Error("Bauträger nicht gefunden");
+        }
+        return getDefaultPaymentTerms(developer);
       }),
   }),
 });

@@ -50,7 +50,10 @@ import {
   InsertContractStatusHistory,
   propertyDrafts,
   PropertyDraft,
-  InsertPropertyDraft
+  InsertPropertyDraft,
+  developers,
+  Developer,
+  InsertDeveloper
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -3059,4 +3062,180 @@ export async function rejectPropertyDraft(
     console.error("[Database] Failed to reject property draft:", error);
     return false;
   }
+}
+
+
+// ============================================
+// DEVELOPERS / BAUTRÄGER
+// ============================================
+
+/**
+ * Create a new developer/Bauträger
+ */
+export async function createDeveloper(developer: InsertDeveloper): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(developers).values(developer);
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error("[Database] Failed to create developer:", error);
+    return null;
+  }
+}
+
+/**
+ * Get all developers
+ */
+export async function getAllDevelopers(activeOnly: boolean = false): Promise<Developer[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    if (activeOnly) {
+      return await db.select().from(developers).where(eq(developers.isActive, true));
+    }
+    return await db.select().from(developers);
+  } catch (error) {
+    console.error("[Database] Failed to get developers:", error);
+    return [];
+  }
+}
+
+/**
+ * Get developer by ID
+ */
+export async function getDeveloperById(id: number): Promise<Developer | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select().from(developers).where(eq(developers.id, id));
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get developer:", error);
+    return null;
+  }
+}
+
+/**
+ * Get developer by code
+ */
+export async function getDeveloperByCode(code: string): Promise<Developer | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.select().from(developers).where(eq(developers.code, code));
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get developer by code:", error);
+    return null;
+  }
+}
+
+/**
+ * Update developer
+ */
+export async function updateDeveloper(
+  id: number,
+  updates: Partial<InsertDeveloper>
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(developers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(developers.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update developer:", error);
+    return false;
+  }
+}
+
+/**
+ * Delete developer (soft delete by setting isActive to false)
+ */
+export async function deleteDeveloper(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(developers)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(developers.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete developer:", error);
+    return false;
+  }
+}
+
+/**
+ * Hard delete developer (permanent)
+ */
+export async function hardDeleteDeveloper(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.delete(developers).where(eq(developers.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to hard delete developer:", error);
+    return false;
+  }
+}
+
+/**
+ * Calculate selling price based on developer settings
+ */
+export function calculateSellingPrice(
+  purchasePrice: number,
+  developer: Developer
+): { sellingPrice: number; margin: number; marginPercent: number } {
+  let margin = 0;
+  
+  if (developer.marginType === "percentage" || developer.marginType === "both") {
+    const marginPercent = parseFloat(developer.defaultMarginPercent || "15");
+    margin = purchasePrice * (marginPercent / 100);
+  }
+  
+  if (developer.marginType === "fixed" || developer.marginType === "both") {
+    const fixedMargin = parseFloat(developer.fixedMarginAmount || "0");
+    if (developer.marginType === "both") {
+      margin += fixedMargin;
+    } else {
+      margin = fixedMargin;
+    }
+  }
+  
+  const sellingPrice = purchasePrice + margin;
+  const marginPercent = (margin / purchasePrice) * 100;
+  
+  return { sellingPrice, margin, marginPercent };
+}
+
+/**
+ * Get default payment terms from developer
+ */
+export function getDefaultPaymentTerms(developer: Developer): {
+  downPaymentPercent: number;
+  allowInstallments: boolean;
+  maxInstallmentMonths: number;
+  interestRate: number;
+  minInterestRate: number;
+  maxInterestRate: number;
+} {
+  return {
+    downPaymentPercent: parseFloat(developer.defaultDownPaymentPercent || "30"),
+    allowInstallments: developer.allowInstallments ?? true,
+    maxInstallmentMonths: developer.maxInstallmentMonths ?? 36,
+    interestRate: parseFloat(developer.defaultInterestRate || "6"),
+    minInterestRate: parseFloat(developer.minInterestRate || "4"),
+    maxInterestRate: parseFloat(developer.maxInterestRate || "12"),
+  };
 }

@@ -1146,6 +1146,16 @@ function AdminDirectDashboard() {
           >
             ✨ KI-Import
           </button>
+          <button
+            onClick={() => setActiveTab("developers")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "developers" 
+                ? "bg-teal-100 text-teal-800 shadow-sm" 
+                : "text-teal-700 hover:text-teal-900 bg-teal-50"
+            }`}
+          >
+            🏗️ Bauträger
+          </button>
           <Link
             href="/crm"
             className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-[#C4A052] text-white hover:bg-[#B39142]"
@@ -1390,6 +1400,11 @@ function AdminDirectDashboard() {
               {/* AI Import Tab */}
               {activeTab === "ai-import" && (
                 <AIPropertyImportTab />
+              )}
+
+              {/* Developers Tab */}
+              {activeTab === "developers" && (
+                <DevelopersAdminTab />
               )}
             </>
           )}
@@ -3486,14 +3501,33 @@ function AIPropertyImportTab() {
   const [isLoadingDrafts, setIsLoadingDrafts] = useState(true);
   const [editingDraft, setEditingDraft] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDeveloperId, setSelectedDeveloperId] = useState<number | null>(null);
+  const [developers, setDevelopers] = useState<any[]>([]);
+  const [isLoadingDevelopers, setIsLoadingDevelopers] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Load drafts
+  // Load drafts and developers
   useEffect(() => {
     loadDrafts();
+    loadDevelopers();
   }, []);
+
+  const loadDevelopers = async () => {
+    setIsLoadingDevelopers(true);
+    try {
+      const res = await fetch("/api/trpc/developers.getAll");
+      const data = await res.json();
+      if (data.result?.data?.json) {
+        setDevelopers(data.result.data.json);
+      }
+    } catch (error) {
+      console.error("Failed to load developers:", error);
+    } finally {
+      setIsLoadingDevelopers(false);
+    }
+  };
 
   const loadDrafts = async () => {
     setIsLoadingDrafts(true);
@@ -3904,15 +3938,23 @@ function AIPropertyImportTab() {
           {/* Developer Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Bauträger / Entwickler
+              Bauträger / Entwickler (optional)
             </label>
-            <input
-              type="text"
-              value={developerName}
-              onChange={(e) => setDeveloperName(e.target.value)}
-              placeholder="z.B. ABC Development GmbH"
+            <select
+              value={selectedDeveloperId || ""}
+              onChange={(e) => {
+                const id = e.target.value ? parseInt(e.target.value) : null;
+                setSelectedDeveloperId(id);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
+            >
+              <option value="">-- Bauträger wählen --</option>
+              {developers.map(dev => (
+                <option key={dev.id} value={dev.id}>
+                  {dev.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Document Upload */}
@@ -4461,4 +4503,10 @@ function DraftEditForm({
       </div>
     </div>
   );
+}
+
+
+function DevelopersAdminTab() {
+  const { DevelopersAdmin } = require("@/components/DevelopersAdmin");
+  return <DevelopersAdmin />;
 }

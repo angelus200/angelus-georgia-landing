@@ -374,3 +374,10 @@
 - [x] Bildoptimierungs-Service mit Komprimierung erstellen
 - [x] Automatische Größenanpassung für hochgeladene Bilder
 - [x] Frontend-Integration in KI-Import
+
+## Bauträger-Vorlagen
+- [x] Datenbankschema für Bauträger (developers) erstellen
+- [x] Backend-API für Bauträger-CRUD implementieren
+- [x] Admin-UI für Bauträger-Verwaltung erstellen
+- [x] Integration in KI-Import mit Bauträger-Auswahl
+- [x] Automatische Preisberechnung basierend auf Marge

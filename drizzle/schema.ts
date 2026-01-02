@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1004,3 +1004,78 @@ export const propertyDrafts = mysqlTable("property_drafts", {
 
 export type PropertyDraft = typeof propertyDrafts.$inferSelect;
 export type InsertPropertyDraft = typeof propertyDrafts.$inferInsert;
+
+
+/**
+ * Developer/Bauträger templates for standardized settings
+ * Stores default margin, payment terms, and contact info per developer
+ */
+export const developers = mysqlTable("developers", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Developer/Bauträger name */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Short code for quick reference */
+  code: varchar("code", { length: 50 }).unique(),
+  /** Company description */
+  description: text("description"),
+  /** Logo URL */
+  logoUrl: varchar("logoUrl", { length: 500 }),
+  /** Website */
+  website: varchar("website", { length: 255 }),
+  
+  // Contact Information
+  contactPerson: varchar("contactPerson", { length: 255 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  contactPhone: varchar("contactPhone", { length: 50 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Georgien"),
+  
+  // Default Pricing Settings
+  /** Default margin percentage to add to purchase price */
+  defaultMarginPercent: decimal("defaultMarginPercent", { precision: 5, scale: 2 }).default("15.00"),
+  /** Fixed margin amount (alternative to percentage) */
+  fixedMarginAmount: decimal("fixedMarginAmount", { precision: 12, scale: 2 }),
+  /** Use percentage or fixed margin */
+  marginType: mysqlEnum("marginType", ["percentage", "fixed", "both"]).default("percentage"),
+  
+  // Default Payment Terms
+  /** Minimum down payment percentage */
+  defaultDownPaymentPercent: decimal("defaultDownPaymentPercent", { precision: 5, scale: 2 }).default("30.00"),
+  /** Allow installment payments */
+  allowInstallments: boolean("allowInstallments").default(true),
+  /** Maximum installment duration in months */
+  maxInstallmentMonths: int("maxInstallmentMonths").default(36),
+  /** Default interest rate for installments */
+  defaultInterestRate: decimal("defaultInterestRate", { precision: 5, scale: 2 }).default("6.00"),
+  /** Minimum interest rate allowed */
+  minInterestRate: decimal("minInterestRate", { precision: 5, scale: 2 }).default("4.00"),
+  /** Maximum interest rate allowed */
+  maxInterestRate: decimal("maxInterestRate", { precision: 5, scale: 2 }).default("12.00"),
+  
+  // Contract Settings
+  /** Default contract language */
+  defaultContractLanguage: mysqlEnum("defaultContractLanguage", ["de", "en", "ka"]).default("de"),
+  /** Special contract clauses for this developer */
+  specialContractClauses: text("specialContractClauses"),
+  /** Warranty period in months */
+  warrantyMonths: int("warrantyMonths").default(24),
+  
+  // Additional Services
+  /** Default services included (JSON array of service IDs) */
+  defaultServices: json("defaultServices").$type<number[]>(),
+  /** Commission rate for referrals */
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 2 }),
+  
+  // Status
+  isActive: boolean("isActive").default(true).notNull(),
+  /** Notes for internal use */
+  internalNotes: text("internalNotes"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Developer = typeof developers.$inferSelect;
+export type InsertDeveloper = typeof developers.$inferInsert;
