@@ -9,6 +9,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import multer from "multer";
 import { storagePut } from "../storage";
+import { optimizePropertyImage, createPropertyThumbnail } from "../image-optimizer";
+import { extractTextFromPDF, performOCR } from "../ocr-service";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -61,6 +63,128 @@ async function startServer() {
     } catch (error) {
       console.error("Upload error:", error);
       res.status(500).json({ error: "Upload fehlgeschlagen" });
+    }
+  });
+  
+  // Optimized image upload endpoint (auto-compresses and resizes)
+  app.post("/api/upload/image", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Keine Datei hochgeladen" });
+      }
+      
+      const file = req.file;
+      const timestamp = Date.now();
+      const baseName = file.originalname.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+      
+      // Optimize the image
+      const optimized = await optimizePropertyImage(file.buffer);
+      
+      if (!optimized.success || !optimized.buffer) {
+        // Fallback to original if optimization fails
+        const s3Key = `properties/images/${timestamp}_${baseName}.${file.mimetype.split('/')[1]}`;
+        const { url } = await storagePut(s3Key, file.buffer, file.mimetype);
+        return res.json({ 
+          url, 
+          key: s3Key,
+          optimized: false,
+          originalSize: file.size,
+          finalSize: file.size
+        });
+      }
+      
+      // Upload optimized image
+      const s3Key = `properties/images/${timestamp}_${baseName}.webp`;
+      const { url } = await storagePut(s3Key, optimized.buffer, 'image/webp');
+      
+      // Also create and upload thumbnail
+      const thumbnail = await createPropertyThumbnail(file.buffer);
+      let thumbnailUrl = url;
+      
+      if (thumbnail.success && thumbnail.buffer) {
+        const thumbKey = `properties/thumbnails/${timestamp}_${baseName}_thumb.webp`;
+        const thumbResult = await storagePut(thumbKey, thumbnail.buffer, 'image/webp');
+        thumbnailUrl = thumbResult.url;
+      }
+      
+      res.json({ 
+        url, 
+        key: s3Key,
+        thumbnailUrl,
+        optimized: true,
+        originalSize: file.size,
+        finalSize: optimized.optimizedSize,
+        compressionRatio: optimized.compressionRatio.toFixed(1),
+        dimensions: { width: optimized.width, height: optimized.height }
+      });
+    } catch (error) {
+      console.error("Optimized upload error:", error);
+      res.status(500).json({ error: "Bildoptimierung fehlgeschlagen" });
+    }
+  });
+  
+  // OCR endpoint for scanned documents
+  const ocrUpload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for PDFs
+  });
+  
+  app.post("/api/ocr/pdf", ocrUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Keine Datei hochgeladen" });
+      }
+      
+      const file = req.file;
+      
+      if (!file.mimetype.includes('pdf')) {
+        return res.status(400).json({ error: "Nur PDF-Dateien werden unterstützt" });
+      }
+      
+      console.log(`Starting OCR for PDF: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      
+      const result = await extractTextFromPDF(file.buffer, 'deu+eng');
+      
+      res.json({
+        success: true,
+        text: result.text,
+        usedOCR: result.usedOCR,
+        confidence: result.confidence,
+        filename: file.originalname
+      });
+    } catch (error) {
+      console.error("OCR error:", error);
+      res.status(500).json({ error: "OCR-Verarbeitung fehlgeschlagen" });
+    }
+  });
+  
+  // OCR endpoint for images
+  app.post("/api/ocr/image", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Keine Datei hochgeladen" });
+      }
+      
+      const file = req.file;
+      
+      if (!file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: "Nur Bilddateien werden unterstützt" });
+      }
+      
+      console.log(`Starting OCR for image: ${file.originalname}`);
+      
+      const result = await performOCR(file.buffer, 'deu+eng');
+      
+      res.json({
+        success: result.success,
+        text: result.text,
+        confidence: result.confidence,
+        filename: file.originalname,
+        error: result.error
+      });
+    } catch (error) {
+      console.error("Image OCR error:", error);
+      res.status(500).json({ error: "Bild-OCR fehlgeschlagen" });
     }
   });
   

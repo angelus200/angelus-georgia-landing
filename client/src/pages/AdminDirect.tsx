@@ -3529,6 +3529,29 @@ function AIPropertyImportTab() {
   };
 
   const readFileAsText = async (file: File): Promise<string> => {
+    // For PDFs, try OCR first
+    if (file.type.includes('pdf')) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const ocrResponse = await fetch('/api/ocr/pdf', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (ocrResponse.ok) {
+          const ocrResult = await ocrResponse.json();
+          if (ocrResult.success && ocrResult.text) {
+            console.log(`OCR completed for ${file.name}: ${ocrResult.usedOCR ? 'Used OCR' : 'Text extraction'}, Confidence: ${ocrResult.confidence || 'N/A'}%`);
+            return ocrResult.text;
+          }
+        }
+      } catch (e) {
+        console.warn('OCR failed, falling back to base64:', e);
+      }
+    }
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -3865,6 +3888,17 @@ function AIPropertyImportTab() {
             <p className="text-purple-700 text-sm">
               Laden Sie Bauträger-Unterlagen hoch und lassen Sie die KI automatisch alle relevanten Daten extrahieren
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                📄 OCR für gescannte PDFs
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                🖼️ Auto-Bildoptimierung
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                🇩🇪 Deutsch + Englisch
+              </span>
+            </div>
           </div>
 
           {/* Developer Name */}

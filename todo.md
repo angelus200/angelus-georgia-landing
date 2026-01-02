@@ -367,3 +367,10 @@
 - [x] Admin-UI für KI-Import mit Dokument-Upload
 - [x] Bearbeitungsformular für extrahierte Daten (Preise, Services, Zahlungsvarianten)
 - [x] Admin-Freigabe-Workflow (Entwurf → Prüfung → Freigabe/Ablehnung)
+
+## OCR und Bildoptimierung
+- [x] OCR-Bibliothek (Tesseract) installieren
+- [x] OCR-Service für gescannte PDFs implementieren
+- [x] Bildoptimierungs-Service mit Komprimierung erstellen
+- [x] Automatische Größenanpassung für hochgeladene Bilder
+- [x] Frontend-Integration in KI-Import
