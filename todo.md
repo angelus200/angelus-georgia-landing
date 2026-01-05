@@ -389,3 +389,11 @@
 - [x] Batch-Import-Logik implementieren
 - [x] Admin-UI für Google Drive Import
 - [x] Fehlerbehandlung und Reporting
+
+
+## Vertrags-System Erweiterung (Checkout-basiert)
+- [ ] Backend-API für manuelle Vertragserstellung
+- [ ] Frontend: Neuer Vertrag Button im Admin
+- [ ] Bauträger-Dropdown im Vertragsformular
+- [ ] Immobilien-Dropdown im Vertragsformular
+- [ ] Checkout-basierter Workflow (ohne Unterschriften)

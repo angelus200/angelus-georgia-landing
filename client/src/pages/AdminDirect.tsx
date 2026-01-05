@@ -2980,8 +2980,36 @@ function ContractsTab() {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [statusReason, setStatusReason] = useState("");
+  
+  // Data for dropdowns
+  const [properties, setProperties] = useState<any[]>([]);
+  const [developers, setDevelopers] = useState<any[]>([]);
+  
+  // New contract form state
+  const [newContract, setNewContract] = useState({
+    propertyId: 0,
+    developerId: 0,
+    buyerFirstName: "",
+    buyerLastName: "",
+    buyerEmail: "",
+    buyerPhone: "",
+    buyerAddress: "",
+    buyerNationality: "",
+    purchasePrice: "",
+    downPaymentPercent: 30,
+    downPaymentAmount: "",
+    remainingAmount: "",
+    paymentPlan: "full" as "full" | "installment",
+    installmentMonths: 12,
+    monthlyInstallment: "",
+    interestRate: "0",
+    status: "draft" as "draft" | "pending_payment" | "active" | "completed",
+    specialConditions: "",
+    internalNotes: "",
+  });
 
   const statusLabels: Record<string, string> = {
     draft: "Entwurf",
@@ -3021,8 +3049,40 @@ function ContractsTab() {
     }
   };
 
+  const fetchProperties = async () => {
+    try {
+      const response = await fetch("/api/trpc/properties.getAll", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (data.result?.data?.json) {
+        setProperties(data.result.data.json);
+      }
+    } catch (error) {
+      console.error("Error fetching properties:", error);
+    }
+  };
+
+  const fetchDevelopers = async () => {
+    try {
+      const response = await fetch("/api/trpc/developers.getAll", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (data.result?.data?.json) {
+        setDevelopers(data.result.data.json);
+      }
+    } catch (error) {
+      console.error("Error fetching developers:", error);
+    }
+  };
+
   useEffect(() => {
     fetchContracts();
+    fetchProperties();
+    fetchDevelopers();
   }, []);
 
   const filteredContracts = contracts.filter((contract) => {
@@ -3067,6 +3127,108 @@ function ContractsTab() {
     }
   };
 
+  // Calculate prices when property or percentage changes
+  const calculatePrices = (propertyId: number, downPaymentPercent: number) => {
+    const property = properties.find(p => p.id === propertyId);
+    if (!property) return;
+    
+    const purchasePrice = parseFloat(property.price || "0");
+    const downPaymentAmount = (purchasePrice * downPaymentPercent) / 100;
+    const remainingAmount = purchasePrice - downPaymentAmount;
+    
+    setNewContract(prev => ({
+      ...prev,
+      purchasePrice: purchasePrice.toFixed(2),
+      downPaymentAmount: downPaymentAmount.toFixed(2),
+      remainingAmount: remainingAmount.toFixed(2),
+      monthlyInstallment: prev.paymentPlan === "installment" && prev.installmentMonths > 0
+        ? (remainingAmount / prev.installmentMonths).toFixed(2)
+        : "",
+    }));
+  };
+
+  const handlePropertyChange = (propertyId: number) => {
+    setNewContract(prev => ({ ...prev, propertyId }));
+    calculatePrices(propertyId, newContract.downPaymentPercent);
+  };
+
+  const handleDownPaymentChange = (percent: number) => {
+    setNewContract(prev => ({ ...prev, downPaymentPercent: percent }));
+    calculatePrices(newContract.propertyId, percent);
+  };
+
+  const handleCreateContract = async () => {
+    if (!newContract.propertyId || !newContract.buyerFirstName || !newContract.buyerLastName || !newContract.buyerEmail) {
+      alert("Bitte füllen Sie alle Pflichtfelder aus (Immobilie, Vorname, Nachname, E-Mail)");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/trpc/contracts.createAdmin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          json: {
+            propertyId: newContract.propertyId,
+            developerId: newContract.developerId || undefined,
+            buyerFirstName: newContract.buyerFirstName,
+            buyerLastName: newContract.buyerLastName,
+            buyerEmail: newContract.buyerEmail,
+            buyerPhone: newContract.buyerPhone || undefined,
+            buyerAddress: newContract.buyerAddress || undefined,
+            buyerNationality: newContract.buyerNationality || undefined,
+            purchasePrice: newContract.purchasePrice,
+            downPaymentPercent: newContract.downPaymentPercent,
+            downPaymentAmount: newContract.downPaymentAmount,
+            remainingAmount: newContract.remainingAmount,
+            paymentPlan: newContract.paymentPlan,
+            installmentMonths: newContract.paymentPlan === "installment" ? newContract.installmentMonths : undefined,
+            monthlyInstallment: newContract.paymentPlan === "installment" ? newContract.monthlyInstallment : undefined,
+            interestRate: newContract.interestRate || undefined,
+            status: newContract.status,
+            specialConditions: newContract.specialConditions || undefined,
+            internalNotes: newContract.internalNotes || undefined,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.result?.data?.json) {
+        alert(`Vertrag ${data.result.data.json.contractNumber} erfolgreich erstellt!`);
+        setShowCreateModal(false);
+        setNewContract({
+          propertyId: 0,
+          developerId: 0,
+          buyerFirstName: "",
+          buyerLastName: "",
+          buyerEmail: "",
+          buyerPhone: "",
+          buyerAddress: "",
+          buyerNationality: "",
+          purchasePrice: "",
+          downPaymentPercent: 30,
+          downPaymentAmount: "",
+          remainingAmount: "",
+          paymentPlan: "full",
+          installmentMonths: 12,
+          monthlyInstallment: "",
+          interestRate: "0",
+          status: "draft",
+          specialConditions: "",
+          internalNotes: "",
+        });
+        fetchContracts();
+      } else {
+        const errorMsg = data.error?.message || "Fehler beim Erstellen des Vertrags";
+        alert(`Fehler: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error("Error creating contract:", error);
+      alert("Fehler beim Erstellen des Vertrags");
+    }
+  };
+
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === "string" ? parseFloat(amount) : amount;
     return new Intl.NumberFormat("de-DE", {
@@ -3104,12 +3266,20 @@ function ContractsTab() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">📝 Kaufverträge</h2>
-        <button
-          onClick={fetchContracts}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-        >
-          🔄 Aktualisieren
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#C4A052] rounded-md hover:bg-[#B39142]"
+          >
+            + Neuer Vertrag
+          </button>
+          <button
+            onClick={fetchContracts}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+          >
+            🔄 Aktualisieren
+          </button>
+        </div>
       </div>
 
       {/* Statistics */}
@@ -3480,6 +3650,260 @@ function ContractsTab() {
                   Status aktualisieren
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Contract Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold">Neuen Vertrag erstellen</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column - Property & Developer */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 border-b pb-2">Immobilie & Bauträger</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Immobilie *</label>
+                  <select
+                    value={newContract.propertyId}
+                    onChange={(e) => handlePropertyChange(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  >
+                    <option value={0}>Immobilie wählen...</option>
+                    {properties.map((property) => (
+                      <option key={property.id} value={property.id}>
+                        {property.title} - {formatCurrency(property.price)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bauträger (optional)</label>
+                  <select
+                    value={newContract.developerId}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, developerId: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  >
+                    <option value={0}>Kein Bauträger</option>
+                    {developers.map((developer) => (
+                      <option key={developer.id} value={developer.id}>
+                        {developer.name} ({developer.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <h4 className="font-medium text-gray-900 border-b pb-2 pt-4">Käufer-Informationen</h4>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
+                    <input
+                      type="text"
+                      value={newContract.buyerFirstName}
+                      onChange={(e) => setNewContract(prev => ({ ...prev, buyerFirstName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
+                    <input
+                      type="text"
+                      value={newContract.buyerLastName}
+                      onChange={(e) => setNewContract(prev => ({ ...prev, buyerLastName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+                  <input
+                    type="email"
+                    value={newContract.buyerEmail}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, buyerEmail: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                  <input
+                    type="tel"
+                    value={newContract.buyerPhone}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, buyerPhone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                  <input
+                    type="text"
+                    value={newContract.buyerAddress}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, buyerAddress: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationalität</label>
+                  <input
+                    type="text"
+                    value={newContract.buyerNationality}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, buyerNationality: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+              </div>
+
+              {/* Right Column - Financial Terms */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 border-b pb-2">Zahlungsbedingungen</h4>
+                
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Kaufpreis:</span>
+                    <span className="font-semibold">{newContract.purchasePrice ? formatCurrency(newContract.purchasePrice) : "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Anzahlung ({newContract.downPaymentPercent}%):</span>
+                    <span className="font-semibold text-[#C4A052]">{newContract.downPaymentAmount ? formatCurrency(newContract.downPaymentAmount) : "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Restbetrag:</span>
+                    <span className="font-semibold">{newContract.remainingAmount ? formatCurrency(newContract.remainingAmount) : "-"}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Anzahlung (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newContract.downPaymentPercent}
+                    onChange={(e) => handleDownPaymentChange(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zahlungsplan</label>
+                  <select
+                    value={newContract.paymentPlan}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, paymentPlan: e.target.value as "full" | "installment" }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  >
+                    <option value="full">Vollzahlung</option>
+                    <option value="installment">Ratenzahlung</option>
+                  </select>
+                </div>
+
+                {newContract.paymentPlan === "installment" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Laufzeit (Monate)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={newContract.installmentMonths}
+                        onChange={(e) => {
+                          const months = parseInt(e.target.value) || 1;
+                          const remaining = parseFloat(newContract.remainingAmount || "0");
+                          setNewContract(prev => ({
+                            ...prev,
+                            installmentMonths: months,
+                            monthlyInstallment: (remaining / months).toFixed(2),
+                          }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Zinssatz (%)</label>
+                      <input
+                        type="text"
+                        value={newContract.interestRate}
+                        onChange={(e) => setNewContract(prev => ({ ...prev, interestRate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                      />
+                    </div>
+                    <div className="bg-[#C4A052]/10 p-3 rounded-lg">
+                      <p className="text-sm text-gray-700">
+                        Monatliche Rate: <span className="font-semibold">{newContract.monthlyInstallment ? formatCurrency(newContract.monthlyInstallment) : "-"}</span>
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <h4 className="font-medium text-gray-900 border-b pb-2 pt-4">Status & Notizen</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vertragsstatus</label>
+                  <select
+                    value={newContract.status}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, status: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  >
+                    <option value="draft">Entwurf</option>
+                    <option value="pending_payment">Warte auf Zahlung</option>
+                    <option value="active">Aktiv</option>
+                    <option value="completed">Abgeschlossen</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Besondere Bedingungen</label>
+                  <textarea
+                    value={newContract.specialConditions}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, specialConditions: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    rows={2}
+                    placeholder="Besondere Vertragsbedingungen..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Interne Notizen</label>
+                  <textarea
+                    value={newContract.internalNotes}
+                    onChange={(e) => setNewContract(prev => ({ ...prev, internalNotes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    rows={2}
+                    placeholder="Interne Notizen (nicht für Kunden sichtbar)..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleCreateContract}
+                className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142]"
+              >
+                Vertrag erstellen
+              </button>
             </div>
           </div>
         </div>

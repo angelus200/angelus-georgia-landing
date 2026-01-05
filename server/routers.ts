@@ -1983,6 +1983,102 @@ export const appRouter = router({
         const success = await deleteContractDocument(input.documentId);
         return { success };
       }),
+
+    // Create contract manually (admin) - Checkout-based without signatures
+    createAdmin: publicProcedure
+      .input(z.object({
+        // Property and Developer
+        propertyId: z.number(),
+        developerId: z.number().optional(),
+        // Buyer info
+        buyerFirstName: z.string().min(1),
+        buyerLastName: z.string().min(1),
+        buyerEmail: z.string().email(),
+        buyerPhone: z.string().optional(),
+        buyerAddress: z.string().optional(),
+        buyerIdType: z.enum(["passport", "id_card", "drivers_license"]).optional(),
+        buyerIdNumber: z.string().optional(),
+        buyerDateOfBirth: z.string().optional(),
+        buyerNationality: z.string().optional(),
+        // Financial terms
+        purchasePrice: z.string(),
+        downPaymentPercent: z.number().min(0).max(100),
+        downPaymentAmount: z.string(),
+        remainingAmount: z.string(),
+        // Payment plan
+        paymentPlan: z.enum(["full", "installment"]),
+        installmentMonths: z.number().optional(),
+        monthlyInstallment: z.string().optional(),
+        interestRate: z.string().optional(),
+        // Status
+        status: z.enum(["draft", "pending_payment", "active", "completed"]).default("draft"),
+        // Special conditions
+        specialConditions: z.string().optional(),
+        internalNotes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Get property details
+        const property = await getPropertyById(input.propertyId);
+        if (!property) {
+          throw new Error("Immobilie nicht gefunden");
+        }
+
+        // Get developer if specified
+        let developerName = null;
+        if (input.developerId) {
+          const developer = await getDeveloperById(input.developerId);
+          if (developer) {
+            developerName = developer.name;
+          }
+        }
+
+        const result = await createPurchaseContract({
+          propertyId: input.propertyId,
+          contractType: "checkout",
+          // Buyer info
+          buyerFirstName: input.buyerFirstName,
+          buyerLastName: input.buyerLastName,
+          buyerEmail: input.buyerEmail,
+          buyerPhone: input.buyerPhone,
+          buyerAddress: input.buyerAddress,
+          buyerIdType: input.buyerIdType,
+          buyerIdNumber: input.buyerIdNumber,
+          buyerDateOfBirth: input.buyerDateOfBirth ? new Date(input.buyerDateOfBirth) : undefined,
+          buyerNationality: input.buyerNationality,
+          // Property info (snapshot)
+          propertyTitle: property.title,
+          propertyLocation: property.location,
+          propertyCity: property.city,
+          propertyArea: property.area,
+          // Developer info
+          developerName: developerName,
+          // Financial terms
+          purchasePrice: input.purchasePrice,
+          downPaymentPercent: input.downPaymentPercent.toFixed(2),
+          downPaymentAmount: input.downPaymentAmount,
+          remainingAmount: input.remainingAmount,
+          // Payment plan
+          paymentPlan: input.paymentPlan,
+          installmentMonths: input.installmentMonths,
+          monthlyInstallment: input.monthlyInstallment,
+          interestRate: input.interestRate || "0.00",
+          // Dates
+          expectedCompletionDate: property.completionDate,
+          // Special conditions
+          specialConditions: input.specialConditions,
+          internalNotes: input.internalNotes,
+          status: input.status,
+        });
+
+        return { contractId: result.contractId, contractNumber: result.contractNumber };
+      }),
+
+    // Get all contracts for admin with filters
+    getAllAdmin: publicProcedure
+      .query(async () => {
+        const contracts = await getAllPurchaseContracts();
+        return contracts;
+      }),
   }),
 
   // ==================== PROPERTY DRAFTS (AI Import) ====================
