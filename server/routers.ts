@@ -2259,36 +2259,40 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         name: z.string().min(1).optional(),
-        code: z.string().max(50).optional(),
-        description: z.string().optional(),
-        logoUrl: z.string().optional(),
-        website: z.string().optional(),
-        contactPerson: z.string().optional(),
-        contactEmail: z.string().optional(),
-        contactPhone: z.string().optional(),
-        address: z.string().optional(),
-        city: z.string().optional(),
-        country: z.string().optional(),
-        defaultMarginPercent: z.string().optional(),
-        fixedMarginAmount: z.string().optional(),
-        marginType: z.enum(["percentage", "fixed", "both"]).optional(),
-        defaultDownPaymentPercent: z.string().optional(),
-        allowInstallments: z.boolean().optional(),
-        maxInstallmentMonths: z.number().optional(),
-        defaultInterestRate: z.string().optional(),
-        minInterestRate: z.string().optional(),
-        maxInterestRate: z.string().optional(),
-        defaultContractLanguage: z.enum(["de", "en", "ka"]).optional(),
-        specialContractClauses: z.string().optional(),
-        warrantyMonths: z.number().optional(),
-        defaultServices: z.array(z.number()).optional(),
-        commissionRate: z.string().optional(),
-        internalNotes: z.string().optional(),
+        code: z.string().max(50).optional().nullable(),
+        description: z.string().optional().nullable(),
+        logoUrl: z.string().optional().nullable(),
+        website: z.string().optional().nullable(),
+        contactPerson: z.string().optional().nullable(),
+        contactEmail: z.string().optional().nullable(),
+        contactPhone: z.string().optional().nullable(),
+        address: z.string().optional().nullable(),
+        city: z.string().optional().nullable(),
+        country: z.string().optional().nullable(),
+        defaultMarginPercent: z.string().optional().nullable(),
+        fixedMarginAmount: z.string().optional().nullable(),
+        marginType: z.enum(["percentage", "fixed", "both"]).optional().nullable(),
+        defaultDownPaymentPercent: z.string().optional().nullable(),
+        allowInstallments: z.boolean().optional().nullable(),
+        maxInstallmentMonths: z.number().optional().nullable(),
+        defaultInterestRate: z.string().optional().nullable(),
+        minInterestRate: z.string().optional().nullable(),
+        maxInterestRate: z.string().optional().nullable(),
+        defaultContractLanguage: z.enum(["de", "en", "ka"]).optional().nullable(),
+        specialContractClauses: z.string().optional().nullable(),
+        warrantyMonths: z.number().optional().nullable(),
+        defaultServices: z.array(z.number()).optional().nullable(),
+        commissionRate: z.string().optional().nullable(),
+        internalNotes: z.string().optional().nullable(),
         isActive: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...updates } = input;
-        const success = await updateDeveloper(id, updates as any);
+        // Filter out null/undefined values and empty strings
+        const cleanedUpdates = Object.fromEntries(
+          Object.entries(updates).filter(([_, value]) => value !== undefined)
+        );
+        const success = await updateDeveloper(id, cleanedUpdates as any);
         if (!success) {
           throw new Error("Fehler beim Aktualisieren des Bauträgers");
         }
