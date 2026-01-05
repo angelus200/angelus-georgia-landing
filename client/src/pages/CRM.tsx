@@ -126,12 +126,14 @@ export default function CRM() {
     },
   });
 
-  // Redirect if not admin
+  // Redirect if not authorized
   useEffect(() => {
     if (!loading) {
       // Check if user is admin OR has admin_direct_access
       const hasAdminDirectAccess = localStorage.getItem("admin_direct_access") === "true";
-      if (!user || (user.role !== "admin" && !hasAdminDirectAccess)) {
+      const isAdmin = user?.role === "admin";
+      
+      if (!hasAdminDirectAccess && !isAdmin) {
         setLocation("/");
       }
     }
@@ -147,7 +149,9 @@ export default function CRM() {
 
   // Check if user is admin OR has admin_direct_access
   const hasAdminDirectAccess = localStorage.getItem("admin_direct_access") === "true";
-  if (!user || (user.role !== "admin" && !hasAdminDirectAccess)) {
+  const isAdmin = user?.role === "admin";
+  
+  if (!hasAdminDirectAccess && !isAdmin) {
     return null;
   }
 
