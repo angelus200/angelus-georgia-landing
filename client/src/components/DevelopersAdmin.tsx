@@ -124,23 +124,42 @@ export function DevelopersAdmin() {
         ? "/api/trpc/developers.update"
         : "/api/trpc/developers.create";
 
+      // Clean up empty strings - convert to undefined so they're not sent
+      const cleanedData = Object.fromEntries(
+        Object.entries(editingDeveloper).map(([key, value]) => {
+          // Keep non-string values as-is
+          if (typeof value !== 'string') return [key, value];
+          // Convert empty strings to undefined
+          if (value === '') return [key, undefined];
+          return [key, value];
+        }).filter(([_, value]) => value !== undefined)
+      );
+
+      console.log("Saving developer:", cleanedData);
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ json: editingDeveloper }),
+        body: JSON.stringify({ json: cleanedData }),
       });
 
       const data = await res.json();
+      console.log("Response:", data);
+      
       if (data.result?.data?.json?.success) {
         alert(editingDeveloper.id ? "Bauträger aktualisiert" : "Bauträger erstellt");
         setShowModal(false);
         loadDevelopers();
+      } else if (data.error) {
+        const errorMsg = data.error?.message || JSON.stringify(data.error);
+        console.error("API Error:", errorMsg);
+        throw new Error(errorMsg);
       } else {
-        throw new Error(data.error?.message || "Fehler beim Speichern");
+        throw new Error("Unbekannter Fehler beim Speichern");
       }
     } catch (error) {
-      console.error("Save error:", error);
-      alert("Fehler beim Speichern");
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error("Save error:", errorMsg);
+      alert(`Fehler beim Speichern: ${errorMsg}`);
     } finally {
       setIsSaving(false);
     }
