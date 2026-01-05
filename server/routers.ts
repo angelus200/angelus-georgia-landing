@@ -2079,6 +2079,67 @@ export const appRouter = router({
         const contracts = await getAllPurchaseContracts();
         return contracts;
       }),
+
+    // Update contract (admin) - Edit buyer data and payment terms
+    updateAdmin: publicProcedure
+      .input(z.object({
+        contractId: z.number(),
+        // Buyer info (all optional for partial updates)
+        buyerFirstName: z.string().optional(),
+        buyerLastName: z.string().optional(),
+        buyerEmail: z.string().email().optional(),
+        buyerPhone: z.string().nullable().optional(),
+        buyerAddress: z.string().nullable().optional(),
+        buyerIdType: z.enum(["passport", "id_card", "drivers_license"]).nullable().optional(),
+        buyerIdNumber: z.string().nullable().optional(),
+        buyerDateOfBirth: z.string().nullable().optional(),
+        buyerNationality: z.string().nullable().optional(),
+        // Financial terms
+        purchasePrice: z.string().optional(),
+        downPaymentPercent: z.string().optional(),
+        downPaymentAmount: z.string().optional(),
+        remainingAmount: z.string().optional(),
+        // Payment plan
+        paymentPlan: z.enum(["full", "installment"]).optional(),
+        installmentMonths: z.number().nullable().optional(),
+        monthlyInstallment: z.string().nullable().optional(),
+        interestRate: z.string().nullable().optional(),
+        // Status
+        status: z.enum(["draft", "pending_payment", "active", "completed", "withdrawal", "cancelled", "converted"]).optional(),
+        // Special conditions
+        specialConditions: z.string().nullable().optional(),
+        internalNotes: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { contractId, ...updateData } = input;
+        
+        // Clean up undefined values and convert empty strings to null
+        const cleanedData: Record<string, any> = {};
+        for (const [key, value] of Object.entries(updateData)) {
+          if (value !== undefined) {
+            cleanedData[key] = value === "" ? null : value;
+          }
+        }
+
+        // Handle date conversion
+        if (cleanedData.buyerDateOfBirth && cleanedData.buyerDateOfBirth !== null) {
+          cleanedData.buyerDateOfBirth = new Date(cleanedData.buyerDateOfBirth);
+        }
+
+        const success = await updatePurchaseContract(contractId, cleanedData);
+        if (!success) {
+          throw new Error("Vertrag konnte nicht aktualisiert werden");
+        }
+        return { success: true };
+      }),
+
+    // Get single contract by ID (admin)
+    getById: publicProcedure
+      .input(z.object({ contractId: z.number() }))
+      .query(async ({ input }) => {
+        const contract = await getPurchaseContractById(input.contractId);
+        return contract;
+      }),
   }),
 
   // ==================== PROPERTY DRAFTS (AI Import) ====================

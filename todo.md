@@ -397,3 +397,10 @@
 - [ ] Bauträger-Dropdown im Vertragsformular
 - [ ] Immobilien-Dropdown im Vertragsformular
 - [ ] Checkout-basierter Workflow (ohne Unterschriften)
+
+## Vertrags-Bearbeitung
+- [x] Backend-API für Vertrags-Update (updateAdmin)
+- [x] Frontend: Bearbeiten-Button in Vertrags-Liste
+- [x] Bearbeiten-Modal mit vorausgefüllten Daten
+- [x] Käufer-Daten bearbeiten
+- [x] Zahlungsbedingungen ändern

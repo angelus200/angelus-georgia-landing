@@ -2981,6 +2981,8 @@ function ContractsTab() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editContract, setEditContract] = useState<any>(null);
   const [newStatus, setNewStatus] = useState("");
   const [statusReason, setStatusReason] = useState("");
   
@@ -3039,8 +3041,12 @@ function ContractsTab() {
         headers: { "Content-Type": "application/json" },
       });
       const data = await response.json();
-      if (data.result?.data) {
-        setContracts(data.result.data);
+      if (data.result?.data?.json) {
+        setContracts(data.result.data.json || []);
+      } else if (data.result?.data) {
+        setContracts(Array.isArray(data.result.data) ? data.result.data : []);
+      } else {
+        setContracts([]);
       }
     } catch (error) {
       console.error("Error fetching contracts:", error);
@@ -3155,6 +3161,80 @@ function ContractsTab() {
   const handleDownPaymentChange = (percent: number) => {
     setNewContract(prev => ({ ...prev, downPaymentPercent: percent }));
     calculatePrices(newContract.propertyId, percent);
+  };
+
+  const openEditModal = (contract: any) => {
+    setEditContract({
+      ...contract,
+      downPaymentPercent: parseFloat(contract.downPaymentPercent) || 30,
+      installmentMonths: contract.installmentMonths || 12,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateContract = async () => {
+    if (!editContract) return;
+
+    try {
+      const response = await fetch("/api/trpc/contracts.updateAdmin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          json: {
+            contractId: editContract.id,
+            buyerFirstName: editContract.buyerFirstName,
+            buyerLastName: editContract.buyerLastName,
+            buyerEmail: editContract.buyerEmail,
+            buyerPhone: editContract.buyerPhone || null,
+            buyerAddress: editContract.buyerAddress || null,
+            buyerNationality: editContract.buyerNationality || null,
+            purchasePrice: editContract.purchasePrice,
+            downPaymentPercent: String(editContract.downPaymentPercent),
+            downPaymentAmount: editContract.downPaymentAmount,
+            remainingAmount: editContract.remainingAmount,
+            paymentPlan: editContract.paymentPlan,
+            installmentMonths: editContract.paymentPlan === "installment" ? editContract.installmentMonths : null,
+            monthlyInstallment: editContract.paymentPlan === "installment" ? editContract.monthlyInstallment : null,
+            interestRate: editContract.interestRate || null,
+            status: editContract.status,
+            specialConditions: editContract.specialConditions || null,
+            internalNotes: editContract.internalNotes || null,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.result?.data?.json?.success) {
+        alert("Vertrag erfolgreich aktualisiert!");
+        setShowEditModal(false);
+        setEditContract(null);
+        fetchContracts();
+      } else {
+        const errorMsg = data.error?.message || "Fehler beim Aktualisieren des Vertrags";
+        alert(`Fehler: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error("Error updating contract:", error);
+      alert("Fehler beim Aktualisieren des Vertrags");
+    }
+  };
+
+  const handleEditDownPaymentChange = (percent: number) => {
+    if (!editContract) return;
+    const price = parseFloat(editContract.purchasePrice) || 0;
+    const downPayment = (price * percent / 100).toFixed(2);
+    const remaining = (price - parseFloat(downPayment)).toFixed(2);
+    const months = editContract.installmentMonths || 12;
+    const monthly = (parseFloat(remaining) / months).toFixed(2);
+    
+    setEditContract((prev: any) => ({
+      ...prev,
+      downPaymentPercent: percent,
+      downPaymentAmount: downPayment,
+      remainingAmount: remaining,
+      monthlyInstallment: monthly,
+    }));
   };
 
   const handleCreateContract = async () => {
@@ -3403,6 +3483,13 @@ function ContractsTab() {
                         👁️
                       </button>
                       <button
+                        onClick={() => openEditModal(contract)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Vertrag bearbeiten"
+                      >
+                        ✏️
+                      </button>
+                      <button
                         onClick={() => {
                           setSelectedContract(contract);
                           setNewStatus(contract.status);
@@ -3411,7 +3498,7 @@ function ContractsTab() {
                         className="text-gray-600 hover:text-gray-900"
                         title="Status ändern"
                       >
-                        ✏️
+                        🔄
                       </button>
                       {contract.contractPdfUrl && (
                         <a
@@ -3903,6 +3990,235 @@ function ContractsTab() {
                 className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142]"
               >
                 Vertrag erstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Contract Modal */}
+      {showEditModal && editContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold">Vertrag bearbeiten - {editContract.contractNumber}</h3>
+              <button
+                onClick={() => { setShowEditModal(false); setEditContract(null); }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column - Buyer Info */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 border-b pb-2">Käufer-Informationen</h4>
+                
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <p className="text-sm text-gray-600">Immobilie:</p>
+                  <p className="font-medium">{editContract.propertyTitle}</p>
+                  <p className="text-sm text-gray-500">{editContract.propertyLocation}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
+                    <input
+                      type="text"
+                      value={editContract.buyerFirstName || ""}
+                      onChange={(e) => setEditContract((prev: any) => ({ ...prev, buyerFirstName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
+                    <input
+                      type="text"
+                      value={editContract.buyerLastName || ""}
+                      onChange={(e) => setEditContract((prev: any) => ({ ...prev, buyerLastName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
+                  <input
+                    type="email"
+                    value={editContract.buyerEmail || ""}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, buyerEmail: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                  <input
+                    type="tel"
+                    value={editContract.buyerPhone || ""}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, buyerPhone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                  <input
+                    type="text"
+                    value={editContract.buyerAddress || ""}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, buyerAddress: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationalität</label>
+                  <input
+                    type="text"
+                    value={editContract.buyerNationality || ""}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, buyerNationality: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+              </div>
+
+              {/* Right Column - Financial Terms */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900 border-b pb-2">Zahlungsbedingungen</h4>
+                
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Kaufpreis:</span>
+                    <span className="font-semibold">{formatCurrency(editContract.purchasePrice)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Anzahlung ({editContract.downPaymentPercent}%):</span>
+                    <span className="font-semibold text-[#C4A052]">{formatCurrency(editContract.downPaymentAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Restbetrag:</span>
+                    <span className="font-semibold">{formatCurrency(editContract.remainingAmount)}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Anzahlung (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editContract.downPaymentPercent}
+                    onChange={(e) => handleEditDownPaymentChange(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zahlungsplan</label>
+                  <select
+                    value={editContract.paymentPlan}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, paymentPlan: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  >
+                    <option value="full">Vollzahlung</option>
+                    <option value="installment">Ratenzahlung</option>
+                  </select>
+                </div>
+
+                {editContract.paymentPlan === "installment" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Laufzeit (Monate)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={editContract.installmentMonths || 12}
+                        onChange={(e) => {
+                          const months = parseInt(e.target.value) || 1;
+                          const remaining = parseFloat(editContract.remainingAmount || "0");
+                          setEditContract((prev: any) => ({
+                            ...prev,
+                            installmentMonths: months,
+                            monthlyInstallment: (remaining / months).toFixed(2),
+                          }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Zinssatz (%)</label>
+                      <input
+                        type="text"
+                        value={editContract.interestRate || "0"}
+                        onChange={(e) => setEditContract((prev: any) => ({ ...prev, interestRate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                      />
+                    </div>
+                    <div className="bg-[#C4A052]/10 p-3 rounded-lg">
+                      <p className="text-sm text-gray-700">
+                        Monatliche Rate: <span className="font-semibold">{editContract.monthlyInstallment ? formatCurrency(editContract.monthlyInstallment) : "-"}</span>
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <h4 className="font-medium text-gray-900 border-b pb-2 pt-4">Status & Notizen</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vertragsstatus</label>
+                  <select
+                    value={editContract.status}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                  >
+                    <option value="draft">Entwurf</option>
+                    <option value="pending_payment">Warte auf Zahlung</option>
+                    <option value="active">Aktiv</option>
+                    <option value="completed">Abgeschlossen</option>
+                    <option value="withdrawal">Widerrufen</option>
+                    <option value="cancelled">Storniert</option>
+                    <option value="converted">Umgewandelt</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Besondere Bedingungen</label>
+                  <textarea
+                    value={editContract.specialConditions || ""}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, specialConditions: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    rows={2}
+                    placeholder="Besondere Vertragsbedingungen..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Interne Notizen</label>
+                  <textarea
+                    value={editContract.internalNotes || ""}
+                    onChange={(e) => setEditContract((prev: any) => ({ ...prev, internalNotes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C4A052]"
+                    rows={2}
+                    placeholder="Interne Notizen (nicht für Kunden sichtbar)..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t">
+              <button
+                onClick={() => { setShowEditModal(false); setEditContract(null); }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleUpdateContract}
+                className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142]"
+              >
+                Änderungen speichern
               </button>
             </div>
           </div>
