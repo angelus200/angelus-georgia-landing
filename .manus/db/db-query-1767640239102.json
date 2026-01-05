@@ -1,0 +1,118 @@
+{
+  "query": "SELECT column_name FROM information_schema.columns WHERE table_name = 'properties' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT column_name FROM information_schema.columns WHERE table_name = 'properties' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id"
+    },
+    {
+      "column_name": "title"
+    },
+    {
+      "column_name": "description"
+    },
+    {
+      "column_name": "location"
+    },
+    {
+      "column_name": "city"
+    },
+    {
+      "column_name": "price"
+    },
+    {
+      "column_name": "area"
+    },
+    {
+      "column_name": "bedrooms"
+    },
+    {
+      "column_name": "bathrooms"
+    },
+    {
+      "column_name": "constructionStatus"
+    },
+    {
+      "column_name": "completionDate"
+    },
+    {
+      "column_name": "images"
+    },
+    {
+      "column_name": "features"
+    },
+    {
+      "column_name": "expectedReturn"
+    },
+    {
+      "column_name": "rentalGuarantee"
+    },
+    {
+      "column_name": "installmentAvailable"
+    },
+    {
+      "column_name": "minDownPayment"
+    },
+    {
+      "column_name": "status"
+    },
+    {
+      "column_name": "createdAt"
+    },
+    {
+      "column_name": "updatedAt"
+    },
+    {
+      "column_name": "longDescription"
+    },
+    {
+      "column_name": "latitude"
+    },
+    {
+      "column_name": "longitude"
+    },
+    {
+      "column_name": "pricePerSqm"
+    },
+    {
+      "column_name": "yearBuilt"
+    },
+    {
+      "column_name": "propertyType"
+    },
+    {
+      "column_name": "mainImage"
+    },
+    {
+      "column_name": "videos"
+    },
+    {
+      "column_name": "virtualTourUrl"
+    },
+    {
+      "column_name": "amenities"
+    },
+    {
+      "column_name": "rentalGuaranteePercent"
+    },
+    {
+      "column_name": "rentalGuaranteeDuration"
+    },
+    {
+      "column_name": "maxInstallmentMonths"
+    },
+    {
+      "column_name": "installmentInterestRate"
+    },
+    {
+      "column_name": "isFeatured"
+    },
+    {
+      "column_name": "viewCount"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\nid\ntitle\ndescription\nlocation\ncity\nprice\narea\nbedrooms\nbathrooms\nconstructionStatus\ncompletionDate\nimages\nfeatures\nexpectedReturn\nrentalGuarantee\ninstallmentAvailable\nminDownPayment\nstatus\ncreatedAt\nupdatedAt\nlongDescription\nlatitude\nlongitude\npricePerSqm\nyearBuilt\npropertyType\nmainImage\nvideos\nvirtualTourUrl\namenities\nrentalGuaranteePercent\nrentalGuaranteeDuration\nmaxInstallmentMonths\ninstallmentInterestRate\nisFeatured\nviewCount\n",
+  "stderr": "",
+  "execution_time_ms": 1505
+}

@@ -1,0 +1,18 @@
+{
+  "query": "SELECT COUNT(*) as total, \n       SUM(CASE WHEN bedrooms = 0 THEN 1 ELSE 0 END) as studios,\n       SUM(CASE WHEN bedrooms = 1 THEN 1 ELSE 0 END) as one_bedroom,\n       SUM(CASE WHEN bedrooms = 2 THEN 1 ELSE 0 END) as two_bedroom,\n       MIN(price) as min_price,\n       MAX(price) as max_price\nFROM properties \nWHERE title LIKE 'Ambassadori Island%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT COUNT(*) as total, \n       SUM(CASE WHEN bedrooms = 0 THEN 1 ELSE 0 END) as studios,\n       SUM(CASE WHEN bedrooms = 1 THEN 1 ELSE 0 END) as one_bedroom,\n       SUM(CASE WHEN bedrooms = 2 THEN 1 ELSE 0 END) as two_bedroom,\n       MIN(price) as min_price,\n       MAX(price) as max_price\nFROM properties \nWHERE title LIKE 'Ambassadori Island%';",
+  "rows": [
+    {
+      "total": "37",
+      "studios": "7",
+      "one_bedroom": "18",
+      "two_bedroom": "12",
+      "min_price": "125880.00",
+      "max_price": "359478.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tstudios\tone_bedroom\ttwo_bedroom\tmin_price\tmax_price\n37\t7\t18\t12\t125880.00\t359478.00\n",
+  "stderr": "",
+  "execution_time_ms": 1513
+}

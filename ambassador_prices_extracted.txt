@@ -1,0 +1,55 @@
+Ambassadori Island Batumi - Preisliste 1.-30. Etage (Stand: 30.12.2025)
+======================================================================
+
+ETAGE 1 - Apartments:
+Apart#  Floor  Bedrooms  TotalArea  LivingArea  Balcony  Status     Category   Views                        Price/m2    TotalPrice
+101     1      2         108.40     80.15       28.25    Available  2bedroom   Sea & City Center            $2,822.95   $306,008.00
+102     1      2         109.10     80.80       28.30    Available  2bedroom   Sea & City Center            $2,822.95   $307,984.00
+103     1      S         37.55      30.85       6.70     Sold       studio     Sea & Island                 $3,036.54   $114,022.00
+104     1      S         44.95      37.20       7.75     Available  studio     Sea & Island                 $3,104.73   $139,557.00
+105     1      S         37.55      30.85       6.70     Available  studio     Sea & Island                 $3,036.54   $114,022.00
+106     1      1         66.80      53.40       13.40    Available  1bedroom   Sea & Island                 $2,889.71   $193,032.00
+107     1      1         66.10      52.70       13.40    Available  1bedroom   Sea & Island                 $2,836.93   $187,521.00
+108     1      S         39.25      32.55       6.70     Sold       studio     Sea & Island                 $3,195.60   $125,427.00
+109     1      S         39.25      32.55       6.70     Sold       studio     Sea & Island                 $3,021.66   $118,600.00
+110     1      S         37.20      30.50       6.70     Sold       studio     Sea & Island                 $3,210.74   $119,440.00
+111     1      1         63.05      48.50       14.55    Available  1bedroom   Sea & Island                 $2,822.95   $177,987.00
+112     1      1         72.55      59.15       13.40    Available  1bedroom   Island & Sea                 $2,901.73   $210,521.00
+113     1      1         64.60      50.05       14.55    Available  1bedroom   Island & Sea                 $2,822.95   $182,363.00
+114     1      S         38.55      31.85       6.70     Sold       studio     Island & Sea                 $3,210.74   $123,774.00
+115     1      S         39.25      32.55       6.70     Available  studio     Island & Sea                 $3,036.54   $119,184.00
+116     1      S         38.55      31.85       6.70     Sold       studio     Island & Sea                 $3,210.74   $123,774.00
+117     1      S         37.10      30.40       6.70     Sold       studio     Island & Sea                 $3,006.77   $111,551.00
+118     1      S         44.95      37.15       7.80     Available  studio     Island & Sea                 $3,089.58   $138,877.00
+119     1      S         37.10      30.40       6.70     Sold       studio     Island & Sea                 $3,021.66   $112,103.00
+120     1      1         56.90      36.40       20.50    Available  1bedroom   Island & Sea                 $2,970.24   $169,007.00
+121     1      S         37.55      30.85       6.70     Sold       studio     Sea, Island & Mountains      $3,021.66   $113,463.00
+122     1      1         53.45      39.00       14.45    Sold       1bedroom   Sea, Island, Mountains&Park  $2,864.88   $153,128.00
+123     1      S         37.55      30.85       6.70     Sold       studio     Island & Sea                 $3,006.77   $112,904.00
+124     1      1         53.45      39.00       14.45    Available  1bedroom   Sea, Island, Mountains&Park  $2,850.90   $152,381.00
+125     1      1         56.90      36.40       20.50    Available  1bedroom   Sea, Island & Mountains      $2,914.86   $165,856.00
+
+ETAGE 2 - Apartments:
+201     2      2         108.40     80.15       28.25    Available  2bedroom   Sea & City Center            $2,853.25   $309,292.00
+202     2      2         109.10     80.80       28.30    Available  2bedroom   Sea & City Center            $2,853.25   $311,290.00
+203     2      S         37.55      30.85       6.70     Available  studio     Sea & Island                 $3,067.14   $115,171.00
+204     2      S         44.95      37.20       7.75     Available  studio     Sea & Island                 $3,135.48   $140,940.00
+205     2      S         37.55      30.85       6.70     Available  studio     Sea & Island                 $3,067.14   $115,171.00
+
+ZUSAMMENFASSUNG DER VERFÜGBAREN APARTMENTS (Etage 1-2):
+=======================================================
+
+Apartment-Typen:
+- Studios (S): 37-45 m², Preis: $111,000 - $141,000
+- 1-Bedroom: 53-73 m², Preis: $152,000 - $211,000
+- 2-Bedroom: 108-109 m², Preis: $306,000 - $312,000
+
+Preise pro m²: $2,822 - $3,210
+
+MIT 20% AUFSCHLAG:
+==================
+- Studios: $133,200 - $169,200
+- 1-Bedroom: $182,400 - $253,200
+- 2-Bedroom: $367,200 - $374,400
+
+Preise pro m² mit Aufschlag: $3,387 - $3,852
