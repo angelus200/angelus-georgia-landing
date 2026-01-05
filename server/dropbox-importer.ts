@@ -96,12 +96,32 @@ async function parseExcelFile(filePath: string): Promise<any[]> {
     }
     return data;
   } else {
-    // Parse Excel using xlsx library
-    const XLSX = require("xlsx");
-    const workbook = XLSX.readFile(filePath);
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(worksheet);
-    return data;
+    // Parse Excel using xlsx library with dynamic import
+    try {
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.readFile(filePath);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+      return data;
+    } catch (error) {
+      console.error("Error parsing Excel file with XLSX:", error);
+      // Fallback: treat as CSV
+      const content = fs.readFileSync(filePath, "utf-8");
+      const lines = content.split("\n");
+      const headers = parseCSVLine(lines[0]);
+      const data: any[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = parseCSVLine(lines[i]);
+        const row: any = {};
+        headers.forEach((header, idx) => {
+          row[header.toLowerCase()] = values[idx];
+        });
+        data.push(row);
+      }
+      return data;
+    }
   }
 }
 

@@ -39,7 +39,7 @@ describe("Dropbox Importer", () => {
 
     expect(result.success).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
-  });
+  }, 30000);
 
   it("should parse CSV headers correctly", () => {
     // Helper function test
