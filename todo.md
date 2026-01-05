@@ -404,3 +404,8 @@
 - [x] Bearbeiten-Modal mit vorausgefüllten Daten
 - [x] Käufer-Daten bearbeiten
 - [x] Zahlungsbedingungen ändern
+
+- [x] Ambassador Apartments Etage 7-15 importieren
+- [x] Ambassador Apartments Etage 16-30 importieren
+- [x] Ambassador Duplexes importieren
+- [x] Ambassador Parkplätze importieren
