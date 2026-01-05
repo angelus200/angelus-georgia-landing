@@ -1,0 +1,17 @@
+{
+  "query": "SELECT \n  COUNT(*) as total,\n  SUM(CASE WHEN propertyType = 'apartment' THEN 1 ELSE 0 END) as apartments,\n  SUM(CASE WHEN propertyType = 'commercial' THEN 1 ELSE 0 END) as commercial,\n  MIN(price) as min_price,\n  MAX(price) as max_price\nFROM properties \nWHERE title LIKE 'Ambassadori Island%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45EyxYVJKxfKNgq.ddfd6e93c30a --database XUfoFxFJx7YgWBjS6TLBXD --execute SELECT \n  COUNT(*) as total,\n  SUM(CASE WHEN propertyType = 'apartment' THEN 1 ELSE 0 END) as apartments,\n  SUM(CASE WHEN propertyType = 'commercial' THEN 1 ELSE 0 END) as commercial,\n  MIN(price) as min_price,\n  MAX(price) as max_price\nFROM properties \nWHERE title LIKE 'Ambassadori Island%';",
+  "rows": [
+    {
+      "total": "135",
+      "apartments": "115",
+      "commercial": "20",
+      "min_price": "25000.00",
+      "max_price": "1622204.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tapartments\tcommercial\tmin_price\tmax_price\n135\t115\t20\t25000.00\t1622204.00\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}

@@ -409,3 +409,4 @@
 - [x] Ambassador Apartments Etage 16-30 importieren
 - [x] Ambassador Duplexes importieren
 - [x] Ambassador Parkplätze importieren
+- [x] Ambassador Gewerbeflächen importieren
