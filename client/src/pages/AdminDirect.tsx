@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useParams, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { DevelopersAdmin } from "@/components/DevelopersAdmin";
 
 // Image Upload Component
 function ImageUploader({ value, onChange, placeholder }: { value: string; onChange: (url: string) => void; placeholder?: string }) {
@@ -4507,6 +4508,5 @@ function DraftEditForm({
 
 
 function DevelopersAdminTab() {
-  const { DevelopersAdmin } = require("@/components/DevelopersAdmin");
   return <DevelopersAdmin />;
 }
