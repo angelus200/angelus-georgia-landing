@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { DropboxImportTab } from "./DropboxImportTab";
 import { 
   Upload, 
   FileText, 
@@ -32,7 +33,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  FileUp
+  FileUp,
+  Cloud
 } from "lucide-react";
 
 interface ExtractedData {
@@ -376,10 +378,14 @@ export function AIPropertyImport() {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload" className="flex items-center gap-2">
             <Sparkles className="w-4 h-4" />
             KI-Import
+          </TabsTrigger>
+          <TabsTrigger value="dropbox" className="flex items-center gap-2">
+            <Cloud className="w-4 h-4" />
+            Dropbox
           </TabsTrigger>
           <TabsTrigger value="drafts" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
@@ -598,6 +604,11 @@ export function AIPropertyImport() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Dropbox Import Tab */}
+        <TabsContent value="dropbox" className="space-y-6">
+          <DropboxImportTab />
         </TabsContent>
 
         {/* Drafts Tab */}

@@ -2168,6 +2168,21 @@ export const appRouter = router({
         );
         return result;
       }),
+
+    // Dropbox Import endpoint
+    importFromDropbox: publicProcedure
+      .input(z.object({
+        dropboxLink: z.string().url(),
+        developerCode: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { importFromDropboxFolder } = await import("./dropbox-importer");
+        const result = await importFromDropboxFolder(
+          input.dropboxLink,
+          input.developerCode
+        );
+        return result;
+      }),
   }),
 
   // ============================================
