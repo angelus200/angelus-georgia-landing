@@ -381,3 +381,11 @@
 - [x] Admin-UI für Bauträger-Verwaltung erstellen
 - [x] Integration in KI-Import mit Bauträger-Auswahl
 - [x] Automatische Preisberechnung basierend auf Marge
+
+## Google Drive Batch-Import
+- [x] Google Drive API Setup und OAuth-Authentifizierung
+- [x] Backend-Service für Google Drive Zugriff
+- [x] Excel-Parser für Datenextraktion
+- [x] Batch-Import-Logik implementieren
+- [x] Admin-UI für Google Drive Import
+- [x] Fehlerbehandlung und Reporting
