@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -60,7 +61,15 @@ import {
   FileText,
   Download,
   AlertTriangle,
-  Clock
+  Clock,
+  Users,
+  Shield,
+  UserPlus,
+  Send,
+  Ban,
+  CheckCircle,
+  XCircle,
+  Copy
 } from "lucide-react";
 
 type ContactStatus = "new" | "contacted" | "closed";
@@ -486,7 +495,7 @@ export default function Admin() {
       {/* Main Content */}
       <main className="container py-8">
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="contacts">Kontaktanfragen</TabsTrigger>
             <TabsTrigger value="properties">Immobilien</TabsTrigger>
             <TabsTrigger value="services">Dienstleistungen</TabsTrigger>
@@ -499,6 +508,10 @@ export default function Admin() {
             <TabsTrigger value="crm" className="bg-primary/10 text-primary">
               <BarChart3 className="h-4 w-4 mr-1" />
               CRM
+            </TabsTrigger>
+            <TabsTrigger value="users" className="bg-blue-100 text-blue-800">
+              <Users className="h-4 w-4 mr-1" />
+              Benutzer
             </TabsTrigger>
           </TabsList>
 
@@ -1903,8 +1916,547 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <React.Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+              <UsersAdminTab />
+            </React.Suspense>
+          </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+// Users Admin Tab Component
+function UsersAdminTab() {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user" as "user" | "admin" | "manager" | "sales",
+    firstName: "",
+    lastName: "",
+    phone: "",
+  });
+  const [inviteForm, setInviteForm] = useState({
+    email: "",
+    role: "user" as "user" | "admin" | "manager" | "sales",
+    name: "",
+  });
+
+  const { data: usersList, isLoading, refetch, error: usersError } = trpc.users.list.useQuery(undefined, {
+    retry: false,
+  });
+  const { data: invitations, refetch: refetchInvitations, error: invitationsError } = trpc.users.listInvitations.useQuery(undefined, {
+    retry: false,
+  });
+
+  const createUserMutation = trpc.users.create.useMutation({
+    onSuccess: () => {
+      toast.success("Benutzer erfolgreich angelegt");
+      setShowCreateDialog(false);
+      setCreateForm({ name: "", email: "", password: "", role: "user", firstName: "", lastName: "", phone: "" });
+      refetch();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
+    onSuccess: () => {
+      toast.success("Rolle erfolgreich geändert");
+      refetch();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const toggleActiveMutation = trpc.users.toggleActive.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.isActive ? "Benutzer aktiviert" : "Benutzer deaktiviert");
+      refetch();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const deleteUserMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Benutzer gelöscht");
+      refetch();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const inviteUserMutation = trpc.users.invite.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Einladung erstellt! Link: ${data.inviteUrl}`);
+      // Copy to clipboard
+      navigator.clipboard.writeText(window.location.origin + data.inviteUrl);
+      setShowInviteDialog(false);
+      setInviteForm({ email: "", role: "user", name: "" });
+      refetchInvitations();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const cancelInvitationMutation = trpc.users.cancelInvitation.useMutation({
+    onSuccess: () => {
+      toast.success("Einladung storniert");
+      refetchInvitations();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const getRoleBadge = (role: string) => {
+    const colors: Record<string, string> = {
+      admin: "bg-red-100 text-red-800",
+      manager: "bg-purple-100 text-purple-800",
+      sales: "bg-blue-100 text-blue-800",
+      user: "bg-gray-100 text-gray-800",
+    };
+    const labels: Record<string, string> = {
+      admin: "Administrator",
+      manager: "Manager",
+      sales: "Vertrieb",
+      user: "Benutzer",
+    };
+    return <Badge className={colors[role] || colors.user}>{labels[role] || role}</Badge>;
+  };
+
+  // Show error if user is not admin
+  if (usersError) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">
+            <Shield className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-semibold mb-2">Zugriff verweigert</h3>
+            <p>{usersError.message || "Nur Administratoren können Benutzer verwalten"}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Actions */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Benutzerverwaltung
+              </CardTitle>
+              <CardDescription>Verwalten Sie Benutzer, Rollen und Einladungen</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Send className="h-4 w-4 mr-2" />
+                    Einladen
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Benutzer einladen</DialogTitle>
+                    <DialogDescription>
+                      Senden Sie eine Einladung per E-Mail. Der Empfänger kann sich mit der zugewiesenen Rolle registrieren.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>E-Mail-Adresse *</Label>
+                      <Input
+                        type="email"
+                        value={inviteForm.email}
+                        onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                        placeholder="email@beispiel.de"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Name (optional)</Label>
+                      <Input
+                        value={inviteForm.name}
+                        onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
+                        placeholder="Max Mustermann"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Rolle</Label>
+                      <Select
+                        value={inviteForm.role}
+                        onValueChange={(value: any) => setInviteForm({ ...inviteForm, role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Benutzer</SelectItem>
+                          <SelectItem value="sales">Vertrieb</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="admin">Administrator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={() => inviteUserMutation.mutate(inviteForm)}
+                      disabled={!inviteForm.email || inviteUserMutation.isPending}
+                    >
+                      {inviteUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                      Einladung senden
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Neuer Benutzer
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Neuen Benutzer anlegen</DialogTitle>
+                    <DialogDescription>
+                      Erstellen Sie einen neuen Benutzer mit sofortigem Zugang.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Vorname</Label>
+                        <Input
+                          value={createForm.firstName}
+                          onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nachname</Label>
+                        <Input
+                          value={createForm.lastName}
+                          onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Anzeigename *</Label>
+                      <Input
+                        value={createForm.name}
+                        onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                        placeholder="Max Mustermann"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>E-Mail-Adresse *</Label>
+                      <Input
+                        type="email"
+                        value={createForm.email}
+                        onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                        placeholder="email@beispiel.de"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Passwort *</Label>
+                      <Input
+                        type="password"
+                        value={createForm.password}
+                        onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                        placeholder="Mindestens 8 Zeichen"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefon</Label>
+                      <Input
+                        value={createForm.phone}
+                        onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                        placeholder="+49 123 456789"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Rolle</Label>
+                      <Select
+                        value={createForm.role}
+                        onValueChange={(value: any) => setCreateForm({ ...createForm, role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Benutzer</SelectItem>
+                          <SelectItem value="sales">Vertrieb</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="admin">Administrator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={() => createUserMutation.mutate(createForm)}
+                      disabled={!createForm.name || !createForm.email || !createForm.password || createUserMutation.isPending}
+                    >
+                      {createUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                      Benutzer anlegen
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Users List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Alle Benutzer ({usersList?.length || 0})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>E-Mail</TableHead>
+                  <TableHead>Rolle</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Registriert</TableHead>
+                  <TableHead>Letzter Login</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {usersList?.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{u.name || "Unbekannt"}</div>
+                          {(u.firstName || u.lastName) && (
+                            <div className="text-xs text-muted-foreground">
+                              {u.firstName} {u.lastName}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{u.email}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={u.role}
+                        onValueChange={(value: any) => updateRoleMutation.mutate({ userId: u.id, role: value })}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Benutzer</SelectItem>
+                          <SelectItem value="sales">Vertrieb</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="admin">Administrator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {u.isActive ? (
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Aktiv
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-800">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Inaktiv
+                          </Badge>
+                        )}
+                        {u.emailVerified && (
+                          <Badge variant="outline" className="text-xs">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Verifiziert
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString("de-DE") : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleDateString("de-DE") : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleActiveMutation.mutate({ userId: u.id })}
+                        >
+                          {u.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm("Benutzer wirklich löschen?")) {
+                              deleteUserMutation.mutate({ userId: u.id });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Invitations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5" />
+            Ausstehende Einladungen ({invitations?.filter(i => i.status === "pending").length || 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invitations && invitations.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>E-Mail</TableHead>
+                  <TableHead>Rolle</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Erstellt</TableHead>
+                  <TableHead>Gültig bis</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invitations.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell>{inv.email}</TableCell>
+                    <TableCell>{getRoleBadge(inv.role)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          inv.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                          inv.status === "accepted" ? "bg-green-100 text-green-800" :
+                          inv.status === "expired" ? "bg-gray-100 text-gray-800" :
+                          "bg-red-100 text-red-800"
+                        }
+                      >
+                        {inv.status === "pending" ? "Ausstehend" :
+                         inv.status === "accepted" ? "Angenommen" :
+                         inv.status === "expired" ? "Abgelaufen" : "Storniert"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(inv.createdAt).toLocaleDateString("de-DE")}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(inv.expiresAt).toLocaleDateString("de-DE")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {inv.status === "pending" && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(window.location.origin + `/register?invite=${inv.token}`);
+                                toast.success("Link kopiert!");
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => cancelInvitationMutation.mutate({ invitationId: inv.id })}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Keine Einladungen vorhanden
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Role Descriptions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Rollenübersicht
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-red-100 text-red-800">Administrator</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Voller Zugriff auf alle Funktionen, Benutzerverwaltung, Systemeinstellungen
+              </p>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-purple-100 text-purple-800">Manager</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Zugriff auf Immobilien, Buchungen, CRM und Reports. Keine Benutzerverwaltung.
+              </p>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-blue-100 text-blue-800">Vertrieb</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Zugriff auf Kontaktanfragen, CRM und eigene Leads. Eingeschränkter Immobilienzugriff.
+              </p>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-gray-100 text-gray-800">Benutzer</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Standard-Kundenrolle. Zugriff auf eigene Buchungen, Wallet und Profil.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

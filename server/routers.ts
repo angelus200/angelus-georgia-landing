@@ -118,10 +118,10 @@ import {
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { getDb } from "./db";
-import { users } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { users, userInvitations } from "../drizzle/schema";
+import { eq, desc, and, or, like, gte, lte, isNull, sql } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
-import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail, sendDepositConfirmationEmail, sendDepositRejectionEmail, sendInterestCreditEmail } from "./email";
+import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail, sendDepositConfirmationEmail, sendDepositRejectionEmail, sendInterestCreditEmail, sendInvitationEmail } from "./email";
 import crypto from "crypto";
 
 // Helper function to parse CSV line (handles quoted values)
@@ -2073,13 +2073,6 @@ export const appRouter = router({
         return { contractId: result.contractId, contractNumber: result.contractNumber };
       }),
 
-    // Get all contracts for admin with filters
-    getAllAdmin: publicProcedure
-      .query(async () => {
-        const contracts = await getAllPurchaseContracts();
-        return contracts;
-      }),
-
     // Update contract (admin) - Edit buyer data and payment terms
     updateAdmin: publicProcedure
       .input(z.object({
@@ -2133,13 +2126,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Get single contract by ID (admin)
-    getById: publicProcedure
-      .input(z.object({ contractId: z.number() }))
-      .query(async ({ input }) => {
-        const contract = await getPurchaseContractById(input.contractId);
-        return contract;
-      }),
   }),
 
   // ==================== PROPERTY DRAFTS (AI Import) ====================
@@ -2501,6 +2487,318 @@ export const appRouter = router({
           throw new Error("Bauträger nicht gefunden");
         }
         return getDefaultPaymentTerms(developer);
+      }),
+  }),
+
+  // User Management Router (Admin only)
+  users: router({
+    // List all users (admin only)
+    list: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Benutzer verwalten");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const allUsers = await db.select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phone: users.phone,
+          isActive: users.isActive,
+          emailVerified: users.emailVerified,
+          createdAt: users.createdAt,
+          lastSignedIn: users.lastSignedIn,
+          invitedBy: users.invitedBy,
+        }).from(users).orderBy(desc(users.createdAt));
+        
+        return allUsers;
+      }),
+
+    // Get user by ID (admin only)
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Benutzer verwalten");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [user] = await db.select().from(users).where(eq(users.id, input.id));
+        return user || null;
+      }),
+
+    // Update user role (admin only)
+    updateRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(["user", "admin", "manager", "sales"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Rollen ändern");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(users)
+          .set({ role: input.role })
+          .where(eq(users.id, input.userId));
+        
+        return { success: true };
+      }),
+
+    // Toggle user active status (admin only)
+    toggleActive: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Benutzer aktivieren/deaktivieren");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [user] = await db.select().from(users).where(eq(users.id, input.userId));
+        if (!user) throw new Error("Benutzer nicht gefunden");
+        
+        await db.update(users)
+          .set({ isActive: !user.isActive })
+          .where(eq(users.id, input.userId));
+        
+        return { success: true, isActive: !user.isActive };
+      }),
+
+    // Create user directly (admin only)
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        password: z.string().min(8),
+        role: z.enum(["user", "admin", "manager", "sales"]),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        phone: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Benutzer anlegen");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Check if email already exists
+        const [existing] = await db.select().from(users).where(eq(users.email, input.email));
+        if (existing) {
+          throw new Error("E-Mail-Adresse bereits registriert");
+        }
+        
+        const passwordHash = await bcrypt.hash(input.password, 10);
+        
+        const [newUser] = await db.insert(users).values({
+          name: input.name,
+          email: input.email,
+          passwordHash,
+          role: input.role,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          phone: input.phone,
+          loginMethod: "password",
+          emailVerified: true, // Admin-created users are verified
+          isActive: true,
+          invitedBy: ctx.user.id,
+        }).$returningId();
+        
+        return { success: true, userId: newUser.id };
+      }),
+
+    // Delete user (admin only)
+    delete: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Benutzer löschen");
+        }
+        if (ctx.user.id === input.userId) {
+          throw new Error("Sie können sich nicht selbst löschen");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.delete(users).where(eq(users.id, input.userId));
+        
+        return { success: true };
+      }),
+
+    // Send invitation (admin only)
+    invite: protectedProcedure
+      .input(z.object({
+        email: z.string().email(),
+        role: z.enum(["user", "admin", "manager", "sales"]),
+        name: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Einladungen versenden");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Check if email already exists as user
+        const [existingUser] = await db.select().from(users).where(eq(users.email, input.email));
+        if (existingUser) {
+          throw new Error("E-Mail-Adresse bereits registriert");
+        }
+        
+        // Check for pending invitation
+        const [existingInvitation] = await db.select().from(userInvitations)
+          .where(and(
+            eq(userInvitations.email, input.email),
+            eq(userInvitations.status, "pending")
+          ));
+        if (existingInvitation) {
+          throw new Error("Eine Einladung für diese E-Mail ist bereits ausstehend");
+        }
+        
+        // Generate invitation token
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        
+        await db.insert(userInvitations).values({
+          email: input.email,
+          role: input.role,
+          token,
+          invitedBy: ctx.user.id,
+          expiresAt,
+        });
+        
+        // Send invitation email
+        const inviterName = ctx.user.name || ctx.user.email || 'Ein Administrator';
+        await sendInvitationEmail(input.email, inviterName, input.role, token);
+        
+        return { 
+          success: true, 
+          token,
+          inviteUrl: `/register?invite=${token}`,
+          message: `Einladung an ${input.email} gesendet`
+        };
+      }),
+
+    // List pending invitations (admin only)
+    listInvitations: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Einladungen sehen");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const invitations = await db.select().from(userInvitations)
+          .orderBy(desc(userInvitations.createdAt));
+        
+        return invitations;
+      }),
+
+    // Cancel invitation (admin only)
+    cancelInvitation: protectedProcedure
+      .input(z.object({ invitationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== "admin") {
+          throw new Error("Nur Administratoren können Einladungen stornieren");
+        }
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(userInvitations)
+          .set({ status: "cancelled" })
+          .where(eq(userInvitations.id, input.invitationId));
+        
+        return { success: true };
+      }),
+
+    // Validate invitation token (public)
+    validateInvitation: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [invitation] = await db.select().from(userInvitations)
+          .where(and(
+            eq(userInvitations.token, input.token),
+            eq(userInvitations.status, "pending")
+          ));
+        
+        if (!invitation) {
+          return { valid: false, message: "Einladung nicht gefunden oder bereits verwendet" };
+        }
+        
+        if (new Date() > invitation.expiresAt) {
+          return { valid: false, message: "Einladung ist abgelaufen" };
+        }
+        
+        return { 
+          valid: true, 
+          email: invitation.email, 
+          role: invitation.role 
+        };
+      }),
+
+    // Accept invitation and register (public)
+    acceptInvitation: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        name: z.string().min(2),
+        password: z.string().min(8),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        phone: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [invitation] = await db.select().from(userInvitations)
+          .where(and(
+            eq(userInvitations.token, input.token),
+            eq(userInvitations.status, "pending")
+          ));
+        
+        if (!invitation) {
+          throw new Error("Einladung nicht gefunden oder bereits verwendet");
+        }
+        
+        if (new Date() > invitation.expiresAt) {
+          throw new Error("Einladung ist abgelaufen");
+        }
+        
+        const passwordHash = await bcrypt.hash(input.password, 10);
+        
+        // Create user
+        const [newUser] = await db.insert(users).values({
+          name: input.name,
+          email: invitation.email,
+          passwordHash,
+          role: invitation.role,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          phone: input.phone,
+          loginMethod: "password",
+          emailVerified: true,
+          isActive: true,
+          invitedBy: invitation.invitedBy,
+        }).$returningId();
+        
+        // Mark invitation as accepted
+        await db.update(userInvitations)
+          .set({ status: "accepted", acceptedAt: new Date() })
+          .where(eq(userInvitations.id, invitation.id));
+        
+        return { success: true, userId: newUser.id };
       }),
   }),
 });

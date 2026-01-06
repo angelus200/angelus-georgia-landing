@@ -624,3 +624,80 @@ export async function sendDepositRejectionEmail(
     return { success: false, error };
   }
 }
+
+
+/**
+ * Send invitation email to new user
+ */
+export async function sendInvitationEmail(
+  to: string,
+  inviterName: string,
+  role: string,
+  token: string
+) {
+  const inviteUrl = `${process.env.VITE_APP_URL || 'http://localhost:3000'}/register?invite=${token}`;
+  
+  const roleLabels: Record<string, string> = {
+    admin: 'Administrator',
+    manager: 'Manager',
+    sales: 'Vertrieb',
+    user: 'Benutzer',
+  };
+  
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
+      to,
+      subject: 'Einladung zu Angelus Management Georgia',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #B8860B;">Sie wurden eingeladen!</h1>
+          
+          <p>${inviterName} hat Sie eingeladen, dem Team von Angelus Management Georgia beizutreten.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 8px 0;"><strong>Zugewiesene Rolle:</strong></td>
+                <td style="text-align: right;">${roleLabels[role] || role}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;"><strong>Gültig bis:</strong></td>
+                <td style="text-align: right;">7 Tage</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p>Klicken Sie auf den folgenden Button, um Ihr Konto zu erstellen:</p>
+          
+          <p style="margin: 30px 0;">
+            <a href="${inviteUrl}" 
+               style="background-color: #B8860B; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Einladung annehmen
+            </a>
+          </p>
+          
+          <p style="color: #666; font-size: 12px;">
+            Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br>
+            <a href="${inviteUrl}" style="color: #B8860B;">${inviteUrl}</a>
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 12px;">
+            Diese Einladung ist 7 Tage gültig. Falls Sie diese Einladung nicht erwartet haben, 
+            können Sie diese E-Mail ignorieren.
+          </p>
+          
+          <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br>Ihr Angelus Management Team</p>
+        </div>
+      `,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending invitation email:', error);
+    return { success: false, error };
+  }
+}

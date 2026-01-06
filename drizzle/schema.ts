@@ -18,7 +18,15 @@ export const users = mysqlTable("users", {
   /** Password hash for local authentication (bcrypt) */
   passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "manager", "sales"]).default("user").notNull(),
+  /** Who invited this user */
+  invitedBy: int("invitedBy"),
+  /** Invitation token for new users */
+  invitationToken: varchar("invitationToken", { length: 255 }),
+  /** Invitation token expiry */
+  invitationTokenExpiry: timestamp("invitationTokenExpiry"),
+  /** Is the user active */
+  isActive: boolean("isActive").default(true).notNull(),
   emailVerified: boolean("emailVerified").default(false).notNull(),
   verificationToken: varchar("verificationToken", { length: 255 }),
   verificationTokenExpiry: timestamp("verificationTokenExpiry"),
@@ -48,6 +56,24 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * User invitations table for tracking pending invitations
+ */
+export const userInvitations = mysqlTable("user_invitations", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["user", "admin", "manager", "sales"]).default("user").notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  invitedBy: int("invitedBy").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  status: mysqlEnum("status", ["pending", "accepted", "expired", "cancelled"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserInvitation = typeof userInvitations.$inferSelect;
+export type InsertUserInvitation = typeof userInvitations.$inferInsert;
 
 /**
  * Contact inquiries table for storing lead form submissions

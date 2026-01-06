@@ -410,3 +410,7 @@
 - [x] Ambassador Duplexes importieren
 - [x] Ambassador Parkplätze importieren
 - [x] Ambassador Gewerbeflächen importieren
+- [x] Benutzerverwaltung im Admin Dashboard erstellen
+- [x] Benutzer anlegen Funktion
+- [x] Rechte vergeben (Admin, Manager, Sales, User)
+- [ ] Einladungs-E-Mail-Funktion
