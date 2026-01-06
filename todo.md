@@ -414,3 +414,5 @@
 - [x] Benutzer anlegen Funktion
 - [x] Rechte vergeben (Admin, Manager, Sales, User)
 - [ ] Einladungs-E-Mail-Funktion
+
+- [x] Checkpoint für Veröffentlichung erstellt (06.01.2026 14:12)
