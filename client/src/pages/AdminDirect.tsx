@@ -321,6 +321,436 @@ function VideoUploader({ value, onChange }: { value: string; onChange: (url: str
   );
 }
 
+// Users Admin Tab Component
+function UsersAdminTab() {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user" as "user" | "admin" | "manager" | "sales",
+    firstName: "",
+    lastName: "",
+    phone: "",
+  });
+  const [inviteForm, setInviteForm] = useState({
+    email: "",
+    role: "user" as "user" | "admin" | "manager" | "sales",
+    name: "",
+  });
+
+  const { data: usersList, isLoading, refetch, error: usersError } = trpc.users.list.useQuery(undefined, {
+    retry: false,
+  });
+  const { data: invitations, refetch: refetchInvitations } = trpc.users.listInvitations.useQuery(undefined, {
+    retry: false,
+  });
+
+  const createUserMutation = trpc.users.create.useMutation({
+    onSuccess: () => {
+      alert("Benutzer erfolgreich angelegt");
+      setShowCreateDialog(false);
+      setCreateForm({ name: "", email: "", password: "", role: "user", firstName: "", lastName: "", phone: "" });
+      refetch();
+    },
+    onError: (error) => alert(error.message),
+  });
+
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
+    onSuccess: () => {
+      alert("Rolle erfolgreich geändert");
+      refetch();
+    },
+    onError: (error) => alert(error.message),
+  });
+
+  const toggleActiveMutation = trpc.users.toggleActive.useMutation({
+    onSuccess: (data) => {
+      alert(data.isActive ? "Benutzer aktiviert" : "Benutzer deaktiviert");
+      refetch();
+    },
+    onError: (error) => alert(error.message),
+  });
+
+  const deleteUserMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      alert("Benutzer gelöscht");
+      refetch();
+    },
+    onError: (error) => alert(error.message),
+  });
+
+  const inviteUserMutation = trpc.users.invite.useMutation({
+    onSuccess: (data) => {
+      alert(`Einladung erstellt! Link wurde in die Zwischenablage kopiert.`);
+      navigator.clipboard.writeText(window.location.origin + data.inviteUrl);
+      setShowInviteDialog(false);
+      setInviteForm({ email: "", role: "user", name: "" });
+      refetchInvitations();
+    },
+    onError: (error) => alert(error.message),
+  });
+
+  const cancelInvitationMutation = trpc.users.cancelInvitation.useMutation({
+    onSuccess: () => {
+      alert("Einladung storniert");
+      refetchInvitations();
+    },
+    onError: (error) => alert(error.message),
+  });
+
+  const getRoleBadge = (role: string) => {
+    const colors: Record<string, string> = {
+      admin: "bg-red-100 text-red-800",
+      manager: "bg-purple-100 text-purple-800",
+      sales: "bg-blue-100 text-blue-800",
+      user: "bg-gray-100 text-gray-800",
+    };
+    const labels: Record<string, string> = {
+      admin: "Administrator",
+      manager: "Manager",
+      sales: "Vertrieb",
+      user: "Benutzer",
+    };
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[role] || colors.user}`}>{labels[role] || role}</span>;
+  };
+
+  if (usersError) {
+    return (
+      <div className="bg-white rounded-lg p-8 text-center">
+        <div className="text-red-500 text-4xl mb-4">⚠️</div>
+        <h3 className="text-lg font-semibold mb-2">Zugriff verweigert</h3>
+        <p className="text-gray-600">{usersError.message || "Nur Administratoren können Benutzer verwalten"}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">👥 Benutzerverwaltung</h2>
+          <p className="text-sm text-gray-600">Verwalten Sie Benutzer, Rollen und Einladungen</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowInviteDialog(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50"
+          >
+            📧 Einladen
+          </button>
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="px-4 py-2 bg-[#C4A052] text-white rounded-md text-sm font-medium hover:bg-[#B39142]"
+          >
+            + Neuer Benutzer
+          </button>
+        </div>
+      </div>
+
+      {/* Users List */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <h3 className="font-semibold mb-4">Alle Benutzer ({usersList?.length || 0})</h3>
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C4A052] mx-auto"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-2">Name</th>
+                  <th className="text-left py-2 px-2">E-Mail</th>
+                  <th className="text-left py-2 px-2">Rolle</th>
+                  <th className="text-left py-2 px-2">Status</th>
+                  <th className="text-left py-2 px-2">Registriert</th>
+                  <th className="text-right py-2 px-2">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usersList?.map((u) => (
+                  <tr key={u.id} className="border-b hover:bg-white">
+                    <td className="py-2 px-2">
+                      <div className="font-medium">{u.name || "Unbekannt"}</div>
+                      {(u.firstName || u.lastName) && (
+                        <div className="text-xs text-gray-500">{u.firstName} {u.lastName}</div>
+                      )}
+                    </td>
+                    <td className="py-2 px-2">{u.email}</td>
+                    <td className="py-2 px-2">
+                      <select
+                        value={u.role}
+                        onChange={(e) => updateRoleMutation.mutate({ userId: u.id, role: e.target.value as any })}
+                        className="border rounded px-2 py-1 text-xs"
+                      >
+                        <option value="user">Benutzer</option>
+                        <option value="sales">Vertrieb</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Administrator</option>
+                      </select>
+                    </td>
+                    <td className="py-2 px-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${u.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                        {u.isActive ? "✓ Aktiv" : "✗ Inaktiv"}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-gray-500">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString("de-DE") : "-"}
+                    </td>
+                    <td className="py-2 px-2 text-right">
+                      <button
+                        onClick={() => toggleActiveMutation.mutate({ userId: u.id })}
+                        className="px-2 py-1 border rounded text-xs mr-1 hover:bg-gray-100"
+                      >
+                        {u.isActive ? "🚫" : "✓"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("Benutzer wirklich löschen?")) {
+                            deleteUserMutation.mutate({ userId: u.id });
+                          }
+                        }}
+                        className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Pending Invitations */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <h3 className="font-semibold mb-4">📧 Ausstehende Einladungen ({invitations?.filter(i => i.status === "pending").length || 0})</h3>
+        {invitations && invitations.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-2">E-Mail</th>
+                  <th className="text-left py-2 px-2">Rolle</th>
+                  <th className="text-left py-2 px-2">Status</th>
+                  <th className="text-left py-2 px-2">Gültig bis</th>
+                  <th className="text-right py-2 px-2">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.map((inv) => (
+                  <tr key={inv.id} className="border-b hover:bg-white">
+                    <td className="py-2 px-2">{inv.email}</td>
+                    <td className="py-2 px-2">{getRoleBadge(inv.role)}</td>
+                    <td className="py-2 px-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        inv.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                        inv.status === "accepted" ? "bg-green-100 text-green-800" :
+                        "bg-gray-100 text-gray-800"
+                      }`}>
+                        {inv.status === "pending" ? "Ausstehend" : inv.status === "accepted" ? "Angenommen" : inv.status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-gray-500">
+                      {new Date(inv.expiresAt).toLocaleDateString("de-DE")}
+                    </td>
+                    <td className="py-2 px-2 text-right">
+                      {inv.status === "pending" && (
+                        <>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(window.location.origin + `/register?invite=${inv.token}`);
+                              alert("Link kopiert!");
+                            }}
+                            className="px-2 py-1 border rounded text-xs mr-1 hover:bg-gray-100"
+                          >
+                            📋
+                          </button>
+                          <button
+                            onClick={() => cancelInvitationMutation.mutate({ invitationId: inv.id })}
+                            className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                          >
+                            ✗
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-4">Keine Einladungen vorhanden</p>
+        )}
+      </div>
+
+      {/* Create User Dialog */}
+      {showCreateDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Neuen Benutzer anlegen</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Vorname</label>
+                  <input
+                    type="text"
+                    value={createForm.firstName}
+                    onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nachname</label>
+                  <input
+                    type="text"
+                    value={createForm.lastName}
+                    onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Anzeigename *</label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Max Mustermann"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">E-Mail *</label>
+                <input
+                  type="email"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="email@beispiel.de"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Passwort *</label>
+                <input
+                  type="password"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Mindestens 8 Zeichen"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Telefon</label>
+                <input
+                  type="text"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="+49 123 456789"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Rolle</label>
+                <select
+                  value={createForm.role}
+                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as any })}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="user">Benutzer</option>
+                  <option value="sales">Vertrieb</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={() => setShowCreateDialog(false)}
+                  className="flex-1 px-4 py-2 border rounded-md hover:bg-gray-50"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => createUserMutation.mutate(createForm)}
+                  disabled={!createForm.name || !createForm.email || !createForm.password || createUserMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142] disabled:opacity-50"
+                >
+                  {createUserMutation.isPending ? "Wird angelegt..." : "Benutzer anlegen"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite User Dialog */}
+      {showInviteDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Benutzer einladen</h3>
+            <p className="text-sm text-gray-600 mb-4">Senden Sie eine Einladung per E-Mail. Der Empfänger kann sich mit der zugewiesenen Rolle registrieren.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">E-Mail-Adresse *</label>
+                <input
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="email@beispiel.de"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Name (optional)</label>
+                <input
+                  type="text"
+                  value={inviteForm.name}
+                  onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Max Mustermann"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Rolle</label>
+                <select
+                  value={inviteForm.role}
+                  onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as any })}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="user">Benutzer</option>
+                  <option value="sales">Vertrieb</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={() => setShowInviteDialog(false)}
+                  className="flex-1 px-4 py-2 border rounded-md hover:bg-gray-50"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => inviteUserMutation.mutate(inviteForm)}
+                  disabled={!inviteForm.email || inviteUserMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-[#C4A052] text-white rounded-md hover:bg-[#B39142] disabled:opacity-50"
+                >
+                  {inviteUserMutation.isPending ? "Wird gesendet..." : "Einladung senden"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Geheimer Token für Direktzugang - NUR FÜR AUTORISIERTE PERSONEN
 const SECRET_TOKEN = "2668814910efd2c52b1633d6ef0e6f569b5e3a7dd535884a8c674a936abe3d5a";
 
@@ -1163,6 +1593,16 @@ function AdminDirectDashboard() {
           >
             📊 CRM
           </Link>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "users" 
+                ? "bg-blue-100 text-blue-800 shadow-sm" 
+                : "text-blue-700 hover:text-blue-900 bg-blue-50"
+            }`}
+          >
+            👥 Benutzer
+          </button>
         </div>
 
         {/* Content */}
@@ -1406,6 +1846,11 @@ function AdminDirectDashboard() {
               {/* Developers Tab */}
               {activeTab === "developers" && (
                 <DevelopersAdminTab />
+              )}
+
+              {/* Users Tab */}
+              {activeTab === "users" && (
+                <UsersAdminTab />
               )}
             </>
           )}
