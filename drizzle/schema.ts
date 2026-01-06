@@ -65,7 +65,7 @@ export const userInvitations = mysqlTable("user_invitations", {
   email: varchar("email", { length: 320 }).notNull(),
   role: mysqlEnum("role", ["user", "admin", "manager", "sales"]).default("user").notNull(),
   token: varchar("token", { length: 255 }).notNull().unique(),
-  invitedBy: int("invitedBy").notNull(),
+  invitedBy: int("invitedBy"),
   expiresAt: timestamp("expiresAt").notNull(),
   acceptedAt: timestamp("acceptedAt"),
   status: mysqlEnum("status", ["pending", "accepted", "expired", "cancelled"]).default("pending").notNull(),
