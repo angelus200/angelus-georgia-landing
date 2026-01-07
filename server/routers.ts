@@ -434,18 +434,18 @@ export const appRouter = router({
     list: publicProcedure.query(async () => {
       return await getAllContactInquiries();
     }),
-    updateStatus: protectedProcedure
+    updateStatus: publicProcedure
       .input(
         z.object({
           id: z.number(),
-          status: z.enum(["new", "contacted", "closed"]),
+          status: z.enum(["new", "contacted", "qualified", "closed"]),
         })
       )
       .mutation(async ({ input }) => {
         await updateContactInquiryStatus(input.id, input.status);
         return { success: true };
       }),
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await deleteContactInquiry(input.id);
@@ -462,7 +462,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return await getPropertyById(input.id);
       }),
-    create: protectedProcedure
+    create: publicProcedure
       .input(
         z.object({
           title: z.string(),
@@ -502,7 +502,7 @@ export const appRouter = router({
         });
         return { success: true };
       }),
-    update: protectedProcedure
+    update: publicProcedure
       .input(
         z.object({
           id: z.number(),
