@@ -31,6 +31,7 @@ import Videos from "./pages/Videos";
 import InvestmentTest from "./pages/InvestmentTest";
 import Wallet from "./pages/Wallet";
 import PurchaseContract from "./pages/PurchaseContract";
+import Register from "./pages/Register";
 import Chatbot from "./components/Chatbot";
 import { CalendlyButton } from "./components/CalendlyPopup";
 import CookieConsent from "./components/CookieConsent";
@@ -70,6 +71,7 @@ function Router() {
       <Route path={"/datenschutz"} component={Datenschutz} />
       <Route path={"/agb"} component={AGB} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/register"} component={Register} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/reset-password"} component={ResetPassword} />
       <Route path={"/verify-email"} component={VerifyEmail} />
