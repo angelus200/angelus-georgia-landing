@@ -169,6 +169,28 @@ export default function Register() {
     );
   }
 
+  // Get login URL based on role
+  const getLoginDestination = () => {
+    if (invitationRole === "admin" || invitationRole === "manager" || invitationRole === "sales") {
+      return "/admin/login";
+    }
+    return "/login";
+  };
+
+  const getSuccessMessage = () => {
+    if (invitationRole === "admin" || invitationRole === "manager" || invitationRole === "sales") {
+      return "Ihr Admin-Konto wurde erstellt. Sie können sich jetzt im Admin-Bereich anmelden.";
+    }
+    return "Ihr Konto wurde erstellt. Sie können sich jetzt anmelden.";
+  };
+
+  const getButtonText = () => {
+    if (invitationRole === "admin" || invitationRole === "manager" || invitationRole === "sales") {
+      return "Zum Admin-Login";
+    }
+    return "Zur Anmeldung";
+  };
+
   // Registration success
   if (registrationSuccess) {
     return (
@@ -178,13 +200,13 @@ export default function Register() {
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <CardTitle className="text-2xl">Registrierung erfolgreich!</CardTitle>
             <CardDescription>
-              Ihr Konto wurde erstellt. Sie können sich jetzt anmelden.
+              {getSuccessMessage()}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/login">
+            <Link href={getLoginDestination()}>
               <Button className="w-full bg-[#C4A052] hover:bg-[#B39142]">
-                Zur Anmeldung
+                {getButtonText()}
               </Button>
             </Link>
           </CardContent>
