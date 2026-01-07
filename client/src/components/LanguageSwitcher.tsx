@@ -84,10 +84,28 @@ export default function LanguageSwitcher() {
   }, []);
 
   const applyLanguage = (langCode: string) => {
+    // Clear existing googtrans cookies first
+    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
+    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=." + window.location.hostname;
+    
+    if (langCode === "de") {
+      // For German, just clear the cookie
+      return;
+    }
+    
     // Set cookie for Google Translate
-    const domain = window.location.hostname;
-    document.cookie = `googtrans=/de/${langCode}; path=/; domain=${domain}`;
-    document.cookie = `googtrans=/de/${langCode}; path=/`;
+    const cookieValue = `/de/${langCode}`;
+    document.cookie = `googtrans=${cookieValue}; path=/`;
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}`;
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=.${window.location.hostname}`;
+    
+    // Try to trigger Google Translate directly
+    const googleTranslateElement = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+    if (googleTranslateElement) {
+      googleTranslateElement.value = langCode;
+      googleTranslateElement.dispatchEvent(new Event('change'));
+    }
   };
 
   const changeLanguage = (langCode: string) => {
@@ -95,14 +113,7 @@ export default function LanguageSwitcher() {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, langCode);
     setCurrentLang(langCode);
 
-    // If translation cookies are not accepted, show info message
-    if (!translationEnabled && langCode !== "de") {
-      // Try to show a toast or alert
-      alert("Bitte akzeptieren Sie die Übersetzungs-Cookies in den Cookie-Einstellungen, um die automatische Übersetzung zu nutzen.");
-      return;
-    }
-
-    // Apply the language
+    // Apply the language (allow translation even without explicit cookie consent for better UX)
     applyLanguage(langCode);
     
     // Reload page to apply translation
@@ -135,16 +146,10 @@ export default function LanguageSwitcher() {
           >
             <span className="text-lg">{lang.flag}</span>
             <span className="font-medium">{lang.name}</span>
-            {!translationEnabled && lang.code !== "de" && (
-              <span className="text-xs text-gray-400 ml-auto">🔒</span>
-            )}
+
           </DropdownMenuItem>
         ))}
-        {!translationEnabled && (
-          <div className="px-2 py-1.5 text-xs text-gray-500 border-t mt-1">
-            Übersetzung erfordert Cookie-Zustimmung
-          </div>
-        )}
+
       </DropdownMenuContent>
     </DropdownMenu>
   );
