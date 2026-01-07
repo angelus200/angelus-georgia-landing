@@ -8,6 +8,30 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
+// Global error handler for Google Translate DOM manipulation conflicts
+// This error occurs when Google Translate modifies DOM nodes that React is trying to update
+window.addEventListener('error', (event) => {
+  if (event.error?.message?.includes('removeChild') || 
+      event.error?.message?.includes('insertBefore') ||
+      event.error?.message?.includes('appendChild')) {
+    // Suppress the error - it's caused by Google Translate browser extension
+    event.preventDefault();
+    console.warn('[Google Translate Conflict] DOM manipulation error suppressed:', event.error?.message);
+    return false;
+  }
+});
+
+// Also catch unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason?.message?.includes('removeChild') || 
+      event.reason?.message?.includes('insertBefore') ||
+      event.reason?.message?.includes('appendChild')) {
+    event.preventDefault();
+    console.warn('[Google Translate Conflict] Promise rejection suppressed:', event.reason?.message);
+    return false;
+  }
+});
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
