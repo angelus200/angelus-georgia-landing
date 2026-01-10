@@ -30,7 +30,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Home() {
   // The userAuth hooks provides authentication state
-  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
+  // To implement login/logout functionality, simply call logout() or redirect to /login
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

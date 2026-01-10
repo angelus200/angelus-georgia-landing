@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { getLoginUrl } from "@/const";
 import { Loader2, Shield } from "lucide-react";
 import { Link } from "wouter";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -43,8 +42,8 @@ export default function AdminLogin() {
   };
 
   const handleOAuthLogin = () => {
-    // Redirect to Manus OAuth
-    window.location.href = getLoginUrl();
+    // Redirect to login page
+    window.location.href = "/login";
   };
 
   return (
@@ -125,14 +124,8 @@ export default function AdminLogin() {
             className="w-full"
             onClick={handleOAuthLogin}
           >
-            <svg
-              className="h-5 w-5 mr-2"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-            </svg>
-            Mit Manus OAuth anmelden
+            <Shield className="h-5 w-5 mr-2" />
+            Zur Standard-Anmeldung
           </Button>
 
           <div className="text-center text-sm text-muted-foreground pt-4">

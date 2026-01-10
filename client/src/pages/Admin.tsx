@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { getLoginUrl } from "@/const";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
