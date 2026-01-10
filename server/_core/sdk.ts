@@ -32,10 +32,10 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {
-    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
+    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl || "(not configured - OAuth disabled)");
     if (!ENV.oAuthServerUrl) {
-      console.error(
-        "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
+      console.warn(
+        "[OAuth] OAUTH_SERVER_URL is not configured. OAuth authentication is disabled. Only local authentication will work."
       );
     }
   }
@@ -49,6 +49,10 @@ class OAuthService {
     code: string,
     state: string
   ): Promise<ExchangeTokenResponse> {
+    if (!ENV.oAuthServerUrl) {
+      throw new Error("OAuth is not configured. OAUTH_SERVER_URL environment variable is not set.");
+    }
+
     const payload: ExchangeTokenRequest = {
       clientId: ENV.appId,
       grantType: "authorization_code",
@@ -67,6 +71,10 @@ class OAuthService {
   async getUserInfoByToken(
     token: ExchangeTokenResponse
   ): Promise<GetUserInfoResponse> {
+    if (!ENV.oAuthServerUrl) {
+      throw new Error("OAuth is not configured. OAUTH_SERVER_URL environment variable is not set.");
+    }
+
     const { data } = await this.client.post<GetUserInfoResponse>(
       GET_USER_INFO_PATH,
       {
@@ -80,7 +88,7 @@ class OAuthService {
 
 const createOAuthHttpClient = (): AxiosInstance =>
   axios.create({
-    baseURL: ENV.oAuthServerUrl,
+    baseURL: ENV.oAuthServerUrl || "http://localhost:9999", // Fallback URL (won't be used if OAuth disabled)
     timeout: AXIOS_TIMEOUT_MS,
   });
 
@@ -237,6 +245,10 @@ class SDKServer {
   async getUserInfoWithJwt(
     jwtToken: string
   ): Promise<GetUserInfoWithJwtResponse> {
+    if (!ENV.oAuthServerUrl) {
+      throw new Error("OAuth is not configured. OAUTH_SERVER_URL environment variable is not set.");
+    }
+
     const payload: GetUserInfoWithJwtRequest = {
       jwtToken,
       projectId: ENV.appId,
@@ -288,21 +300,26 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
+    // If user not in DB, sync from OAuth server automatically (only if OAuth is configured)
     if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-        await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
+      if (ENV.oAuthServerUrl) {
+        try {
+          const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+          await db.upsertUser({
+            openId: userInfo.openId,
+            name: userInfo.name || null,
+            email: userInfo.email ?? null,
+            loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(userInfo.openId);
+        } catch (error) {
+          console.error("[Auth] Failed to sync user from OAuth:", error);
+          throw ForbiddenError("Failed to sync user info");
+        }
+      } else {
+        console.warn("[Auth] User not found in database and OAuth is not configured. Cannot sync user.");
+        throw ForbiddenError("User not found in database");
       }
     }
 
