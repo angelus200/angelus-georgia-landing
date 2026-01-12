@@ -34,7 +34,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 const queryClient = new QueryClient();
 
-const CLERK_PUBLISHABLE_KEY = "pk_test_c2tpbGxlZC1zaGluZXItOTUuY2xlcmsuYWNjb3VudHMuZGV2JA";
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
