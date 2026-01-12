@@ -62,10 +62,10 @@ function SessionHandler() {
   return null;
 }
 
-// Redirect component for bypassing 2FA
-function BypassTwoFactor() {
+// Redirect component for bypassing 2FA and MFA flows
+function BypassAuthFactor() {
   useEffect(() => {
-    // Redirect to dashboard, bypassing Clerk's 2FA flow
+    // Redirect to dashboard, bypassing Clerk's 2FA/MFA flow
     window.location.href = "/dashboard";
   }, []);
 
@@ -85,7 +85,8 @@ function Router() {
       <Route path={"/datenschutz"} component={Datenschutz} />
       <Route path={"/agb"} component={AGB} />
       <Route path={"/login"} component={Login} />
-      <Route path={"/login/factor-two"} component={BypassTwoFactor} />
+      <Route path={"/login/factor-one"} component={BypassAuthFactor} />
+      <Route path={"/login/factor-two"} component={BypassAuthFactor} />
       <Route path={"/register"} component={Register} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/reset-password"} component={ResetPassword} />
